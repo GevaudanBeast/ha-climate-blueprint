@@ -1,0 +1,332 @@
+blueprint:
+  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.0"
+  description: "Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
+  domain: automation
+  author: LaCaseHome
+
+  input:
+    room_name:
+      name: Nom logique de la pièce
+      default: "Pièce"
+
+    climate_entity:
+      name: Entité climate (thermostat/clim)
+      selector:
+        entity:
+          domain: climate
+
+    # Fenêtres / Portes
+    window_sensors:
+      name: Capteurs fenêtre(s)/porte(s)
+      description: "Liste des binary_sensor 'on' quand ouvert."
+      default: []
+      selector:
+        entity:
+          domain: binary_sensor
+          multiple: true
+
+    delay_open_min:
+      name: "Délai avant PAUSE (min) après ouverture"
+      default: 2
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+          unit_of_measurement: "min"
+
+    delay_close_min:
+      name: "Délai avant REPRISE (min) après fermeture"
+      default: 2
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+          unit_of_measurement: "min"
+
+    # Saison / Away
+    summer_entity:
+      name: Indicateur Été (calendar/input_boolean/sensor on/off) – ON = Été
+      description: "Laisser vide pour ignorer et forcer Hiver."
+      default: ""
+      selector:
+        entity: {}
+
+    alarm_entity:
+      name: Alarme / Présence (Away si armée)
+      description: "Requis pour gérer preset away/home automatiquement."
+      default: ""
+      selector:
+        entity:
+          domain: alarm_control_panel
+
+    # Solar Optimizer (OPTIONNEL)
+    solar_enable:
+      name: "Solar Optimizer – ACTIVE switch (ex: switch.solar_optimizer_xxx)"
+      default: ""
+      selector:
+        entity:
+          domain: [input_boolean, binary_sensor, switch]
+
+    # Consignes par défaut
+    thermostat_heat_default:
+      name: Consigne Hiver (°C)
+      default: 21
+      selector:
+        number:
+          min: 16
+          max: 24
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    thermostat_cool_default:
+      name: Consigne Été (°C)
+      default: 24
+      selector:
+        number:
+          min: 20
+          max: 28
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    # Tick paramétrable
+    tick_minutes:
+      name: "Fréquence de ré-application (0 = désactivé)"
+      description: "Réapplique preset home et mode/consigne saisonniers."
+      default: "10"
+      selector:
+        select:
+          options:
+            - label: "Désactivé"
+              value: "0"
+            - label: "5 min"
+              value: "5"
+            - label: "10 min"
+              value: "10"
+            - label: "15 min"
+              value: "15"
+
+mode: restart
+max_exceeded: silent
+
+variables:
+  room: !input room_name
+  climate: !input climate_entity
+  summer_entity_id: !input summer_entity
+  alarm_id: !input alarm_entity
+  solar_id: !input solar_enable
+  window_sensors_list: !input window_sensors
+  heat_default: !input thermostat_heat_default
+  cool_default: !input thermostat_cool_default
+  tick_m: !input tick_minutes
+
+trigger:
+  # Fenêtres
+  - id: win_open
+    platform: state
+    entity_id: !input window_sensors
+    to: "on"
+    for:
+      minutes: !input delay_open_min
+
+  - id: win_close
+    platform: state
+    entity_id: !input window_sensors
+    to: "off"
+    for:
+      minutes: !input delay_close_min
+
+  # Saison / Alarme / Solaire (OPTIONNELS) via TEMPLATE pour gérer les valeurs vides
+  - id: optional_entities_change
+    platform: template
+    value_template: >-
+      {% set summer = summer_entity_id %}
+      {% set alarm = alarm_id %}
+      {% set solar = solar_id %}
+      {% set changes = [] %}
+      {% if summer and summer != '' %}
+        {% set changes = changes + [states(summer)] %}
+      {% endif %}
+      {% if alarm and alarm != '' %}
+        {% set changes = changes + [states(alarm)] %}
+      {% endif %}
+      {% if solar and solar != '' %}
+        {% set changes = changes + [states(solar)] %}
+      {% endif %}
+      {{ changes | join(',') }}
+
+  # Tick (optimisé)
+  - id: periodic
+    platform: template
+    value_template: >-
+      {% if tick_m is defined %}
+        {% set m = tick_m | int(0) %}
+        {% if m > 0 %}
+          {{ (now().minute % m) == 0 and now().second < 5 }}
+        {% else %}
+          false
+        {% endif %}
+      {% else %}
+        false
+      {% endif %}
+
+condition: []
+
+action:
+  # Variables runtime
+  - variables:
+      solar_active: "{{ solar_id != '' and is_state(solar_id, 'on') }}"
+
+      win_any_open: >-
+        {{ expand(window_sensors_list) | selectattr('state','eq','on') | list | count > 0 }}
+
+      is_summer: >-
+        {% if summer_entity_id and (summer_entity_id | string) != '' %}
+          {% set st = states(summer_entity_id) | lower %}
+          {{ st in ['on','true','open','summer','été','ete'] }}
+        {% else %}
+          false
+        {% endif %}
+
+      is_away: >-
+        {% if alarm_id and (alarm_id | string) != '' %}
+          {% set st = states(alarm_id) | lower %}
+          {{ st.startswith('armed') }}
+        {% else %}
+          false
+        {% endif %}
+
+      current_mode: "{{ states(climate) }}"
+      current_preset: "{{ state_attr(climate, 'preset_mode') or '' }}"
+      current_temp: "{{ state_attr(climate,'temperature') | float(default=-9999) }}"
+      presets: "{{ state_attr(climate, 'preset_modes') or [] }}"
+
+  # 1) Fenêtres ouvertes → OFF (prioritaire même sur SO)
+  - choose:
+      - conditions: "{{ win_any_open }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ current_mode in ['heat', 'cool'] }}"
+            then:
+              - service: climate.set_hvac_mode
+                target:
+                  entity_id: "{{ climate }}"
+                data:
+                  hvac_mode: "off"
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: "🪟 Fenêtre ouverte → OFF (était en {{ current_mode }})"
+          - stop: "Pause appliquée (fenêtre ouverte)"
+
+  # ⭐ 2) SOLAIRE (PRIORITÉ AVANT AWAY)
+  - choose:
+      - conditions: "{{ solar_active }}"
+        sequence:
+          - service: logbook.log
+            data:
+              name: "{{ room }}"
+              message: "⚡ SO actif → laisser SO piloter"
+          - stop: "SO actif (prioritaire)"
+
+  # 3) Gestion AWAY / HOME via alarme
+  - choose:
+      # Alarme armée → Preset AWAY
+      - conditions: "{{ is_away }}"
+        sequence:
+          - choose:
+              - conditions: "{{ 'away' in presets }}"
+                sequence:
+                  - if:
+                      - condition: template
+                        value_template: "{{ current_preset != 'away' }}"
+                    then:
+                      - service: climate.set_preset_mode
+                        target:
+                          entity_id: "{{ climate }}"
+                        data:
+                          preset_mode: "away"
+                      - service: logbook.log
+                        data:
+                          name: "{{ room }}"
+                          message: "🔒 Alarme armée → Preset AWAY activé"
+              - conditions: "{{ 'away' not in presets }}"
+                sequence:
+                  - if:
+                      - condition: template
+                        value_template: "{{ current_mode != 'off' }}"
+                    then:
+                      - service: climate.set_hvac_mode
+                        target:
+                          entity_id: "{{ climate }}"
+                        data:
+                          hvac_mode: "off"
+                      - service: logbook.log
+                        data:
+                          name: "{{ room }}"
+                          message: "🔒 Alarme armée → OFF (pas de preset 'away')"
+          - stop: "Mode Away appliqué"
+
+      # Alarme désarmée → Preset HOME (ou NONE si HOME n'existe pas)
+      - conditions: "{{ not is_away }}"
+        sequence:
+          - choose:
+              - conditions: "{{ 'home' in presets and current_preset != 'home' }}"
+                sequence:
+                  - service: climate.set_preset_mode
+                    target:
+                      entity_id: "{{ climate }}"
+                    data:
+                      preset_mode: "home"
+                  - service: logbook.log
+                    data:
+                      name: "{{ room }}"
+                      message: "🏠 Alarme désarmée → Preset HOME appliqué"
+              - conditions: "{{ 'home' not in presets and 'none' in presets and current_preset != 'none' }}"
+                sequence:
+                  - service: climate.set_preset_mode
+                    target:
+                      entity_id: "{{ climate }}"
+                    data:
+                      preset_mode: "none"
+                  - service: logbook.log
+                    data:
+                      name: "{{ room }}"
+                      message: "🏠 Alarme désarmée → Preset NONE (pas de 'home')"
+
+  # 4) Mode normal → bascule été/hiver + consigne
+  - variables:
+      target_mode: "{{ 'cool' if is_summer else 'heat' }}"
+      target_temp: "{{ cool_default if is_summer else heat_default }}"
+
+  # Appliquer le mode HVAC
+  - if:
+      - condition: template
+        value_template: "{{ current_mode != target_mode }}"
+    then:
+      - service: climate.set_hvac_mode
+        target:
+          entity_id: "{{ climate }}"
+        data:
+          hvac_mode: "{{ target_mode }}"
+      - service: logbook.log
+        data:
+          name: "{{ room }}"
+          message: "🌡️ Mode {{ target_mode|upper }} activé ({{ 'Été' if is_summer else 'Hiver' }})"
+
+  # Appliquer la température
+  - if:
+      - condition: template
+        value_template: "{{ current_temp != (target_temp | float) }}"
+    then:
+      - service: climate.set_temperature
+        target:
+          entity_id: "{{ climate }}"
+        data:
+          temperature: "{{ target_temp | float }}"
+      - service: logbook.log
+        data:
+          name: "{{ room }}"
+          message: "🌡️ Consigne {{ target_temp }}°C appliquée ({{ 'Été' if is_summer else 'Hiver' }})"

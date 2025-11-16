@@ -1,0 +1,388 @@
+blueprint:
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.2 [Fixed None]"
+  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix: trigger SO conditionnel si configuré. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique."
+  domain: automation
+  author: LaCaseHome
+
+  input:
+    room_name:
+      name: Nom logique de la pièce
+      default: "Pièce"
+
+    climate_entity:
+      name: Entité climate (X4FP – fil pilote)
+      selector: { entity: { domain: climate } }
+
+    # -------- Thermique (OPTIONNEL) --------
+    room_temp_sensor:
+      name: Capteur de température (°C) – optionnel
+      default: ""
+      selector: { entity: { domain: sensor } }
+
+    setpoint_number:
+      name: Consigne (input_number.* en °C) – optionnel
+      default: ""
+      selector: { entity: { domain: input_number } }
+
+    hysteresis_c:
+      name: "Hystérésis (°C)"
+      default: 0.5
+      selector: { number: { min: 0.2, max: 2.0, step: 0.1 } }
+
+    min_allowed_c:
+      name: "Garde-fou: consigne mini (°C)"
+      default: 17
+      selector: { number: { min: 5, max: 25, step: 0.5 } }
+
+    max_allowed_c:
+      name: "Garde-fou: consigne maxi (°C)"
+      default: 23
+      selector: { number: { min: 15, max: 28, step: 0.5 } }
+
+    # -------- Fenêtres (OPTIONNEL) --------
+    window_sensors:
+      name: Capteurs fenêtre(s)/porte(s) (peut être vide)
+      default: []
+      selector: { entity: { domain: binary_sensor, multiple: true } }
+
+    delay_open_min:
+      name: "Délai avant PAUSE (min) après ouverture"
+      default: 2
+      selector: { number: { min: 0, max: 60, step: 1 } }
+
+    delay_close_min:
+      name: "Délai avant REPRISE (min) après fermeture"
+      default: 2
+      selector: { number: { min: 0, max: 60, step: 1 } }
+
+    # -------- Été / Away (OPTIONNELS) --------
+    summer_entity:
+      name: Indicateur Été (on/off) – ON = Été
+      default: ""
+      selector: { entity: {} }
+
+    summer_policy:
+      name: Politique en Été
+      default: "off"
+      selector:
+        select:
+          options:
+            - label: "OFF (thermostat arrêté)"
+              value: "off"
+            - label: "ECO (laisser en éco)"
+              value: "eco"
+
+    alarm_entity:
+      name: Alarme (Alarmo) – Away si armed_*
+      default: ""
+      selector: { entity: { domain: alarm_control_panel } }
+
+    # -------- SOLAIRE (OPTIONNEL) --------
+    solar_switch:
+      name: "Solar Optimizer – SWITCH D'ACTION (ex: switch.solar_optimizer_chauffage_suite_parentale)"
+      description: "Le switch que SO contrôle : ON = SO chauffe maintenant, OFF = SO ne chauffe pas. Laisser vide si pas de SO."
+      default: ""
+      selector:
+        entity:
+          domain: switch
+
+    allow_solar_in_away:
+      name: "Autoriser SO à chauffer en mode Away"
+      description: "Si activé, SO peut forcer COMFORT même quand alarme armée"
+      default: false
+      selector:
+        boolean: {}
+
+    solar_preset:
+      name: "Preset quand SO chauffe"
+      description: "Quel preset appliquer quand SO est actif (ON)"
+      default: "comfort"
+      selector:
+        select:
+          options: [eco, comfort, comfort-1, comfort-2, away, boost, none]
+
+    # -------- Presets --------
+    preset_heat:
+      name: Preset quand on chauffe (demande)
+      default: comfort
+      selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
+
+    preset_idle:
+      name: Preset quand on n'a plus besoin de chauffer
+      default: eco
+      selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
+
+    preset_window:
+      name: Preset quand fenêtre ouverte
+      default: away
+      selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
+
+    preset_away:
+      name: Preset en Away (si pas de solaire)
+      default: away
+      selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
+
+    # -------- Tick paramétrable --------
+    tick_minutes:
+      name: "Fréquence de ré-application (min) – 0 pour désactiver"
+      default: 10
+      selector: { number: { min: 0, max: 120, step: 1 } }
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  # Fenêtres (liste optionnelle) via STATE
+  - id: win_open
+    platform: state
+    entity_id: !input window_sensors
+    to: "on"
+    for: { minutes: !input delay_open_min }
+
+  - id: win_close
+    platform: state
+    entity_id: !input window_sensors
+    to: "off"
+    for: { minutes: !input delay_close_min }
+
+  # Été / Away / Solar switch (OPTIONNELS) via TEMPLATE pour gérer les valeurs vides
+  - id: optional_entities_change
+    platform: template
+    value_template: >-
+      {% set summer = summer_id %}
+      {% set alarm = alarm_id %}
+      {% set solar = solar_switch_id %}
+      {% set changes = [] %}
+      {% if summer and summer != '' %}
+        {% set changes = changes + [states(summer)] %}
+      {% endif %}
+      {% if alarm and alarm != '' %}
+        {% set changes = changes + [states(alarm)] %}
+      {% endif %}
+      {% if solar and solar != '' %}
+        {% set changes = changes + [states(solar)] %}
+      {% endif %}
+      {{ changes | join(',') }}
+
+  # Tick périodique (optimisé)
+  - id: periodic
+    platform: template
+    value_template: >-
+      {% if tick_minutes is defined %}
+        {% set m = tick_minutes | int(0) %}
+        {% if m > 0 %}
+          {{ now().minute % m == 0 and now().second < 5 }}
+        {% else %}
+          false
+        {% endif %}
+      {% else %}
+        false
+      {% endif %}
+
+variables:
+  room: !input room_name
+  climate: !input climate_entity
+
+  window_sensors_list: !input window_sensors
+
+  temp_id: !input room_temp_sensor
+  sp_id: !input setpoint_number
+  hys: !input hysteresis_c
+  sp_min: !input min_allowed_c
+  sp_max: !input max_allowed_c
+
+  summer_id: !input summer_entity
+  summer_policy: !input summer_policy
+  alarm_id: !input alarm_entity
+
+  solar_switch_id: !input solar_switch
+  allow_solar_in_away: !input allow_solar_in_away
+  solar_preset: !input solar_preset
+
+  preset_heat: !input preset_heat
+  preset_idle: !input preset_idle
+  preset_window: !input preset_window
+  preset_away: !input preset_away
+
+  tick_minutes: !input tick_minutes
+
+  # Valeurs
+  t_room: >-
+    {% if temp_id and temp_id != '' %}
+      {{ states(temp_id) | float(0) }}
+    {% else %}
+      {{ 0.0 }}
+    {% endif %}
+  sp_raw: >-
+    {% if sp_id and sp_id != '' %}
+      {{ states(sp_id) | float(0) }}
+    {% else %}
+      {{ 0.0 }}
+    {% endif %}
+
+  # Clamp consigne
+  sp: >-
+    {% set s = sp_raw %}
+    {% if s < sp_min %} {{ sp_min }}
+    {% elif s > sp_max %} {{ sp_max }}
+    {% else %} {{ s }}
+    {% endif %}
+
+  # Été / Away / Solaire
+  is_summer: "{{ summer_id != '' and is_state(summer_id, 'on') }}"
+  is_away: >-
+    {% if alarm_id and alarm_id != '' %}
+      {% set st = states(alarm_id) | lower %}
+      {{ st.startswith('armed') }}
+    {% else %} false {% endif %}
+  
+  # ⭐ Logique SO - Surveille le switch d'action
+  solar_is_heating: "{{ solar_switch_id != '' and is_state(solar_switch_id, 'on') }}"
+  solar_can_override_away: "{{ allow_solar_in_away and solar_is_heating }}"
+
+  # Fenêtres
+  win_any_open: >-
+    {% set ws = window_sensors_list | default([]) %}
+    {{ expand(ws) | selectattr('state','eq','on') | list | count > 0 }}
+
+  # Config thermique
+  has_thermal: "{{ temp_id != '' and sp_id != '' }}"
+
+condition: []
+
+action:
+
+  # 0) Validation config
+  - variables:
+      current_preset: "{{ state_attr(climate,'preset_mode') or '' }}"
+      current_mode: "{{ states(climate) }}"
+
+  # 1) ÉTÉ (priorité absolue)
+  - choose:
+      - conditions: "{{ is_summer and summer_policy == 'off' }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ current_mode != 'off' }}"
+            then:
+              - service: climate.set_hvac_mode
+                target: { entity_id: "{{ climate }}" }
+                data: { hvac_mode: "off" }
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: "☀️ Été → OFF"
+          - stop: "Été OFF"
+
+      - conditions: "{{ is_summer and summer_policy == 'eco' }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ current_preset != preset_idle }}"
+            then:
+              - service: climate.set_preset_mode
+                target: { entity_id: "{{ climate }}" }
+                data: { preset_mode: "{{ preset_idle }}" }
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: "☀️ Été → ECO"
+          - stop: "Été ECO"
+
+  # 2) FENÊTRE ouverte (pause) – prioritaire même sur SO
+  - choose:
+      - conditions: "{{ win_any_open }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ current_preset != preset_window }}"
+            then:
+              - service: climate.set_preset_mode
+                target: { entity_id: "{{ climate }}" }
+                data: { preset_mode: "{{ preset_window }}" }
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: "🪟 Fenêtre ouverte → PAUSE ({{ preset_window }})"
+          - stop: "Pause fenêtre"
+
+  # ⭐ 3) SOLAIRE ACTIF (switch.solar_optimizer_xxx = ON) - PRIORITÉ ABSOLUE
+  - choose:
+      - conditions: "{{ solar_is_heating and solar_preset != 'none' }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ current_preset != solar_preset }}"
+            then:
+              - service: climate.set_preset_mode
+                target: { entity_id: "{{ climate }}" }
+                data: { preset_mode: "{{ solar_preset }}" }
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: "⚡ SO ACTIF ({{ solar_switch_id }}) → {{ solar_preset|upper }}"
+          - stop: "SO chauffe activement"
+
+      - conditions: "{{ solar_is_heating and solar_preset == 'none' }}"
+        sequence:
+          - service: logbook.log
+            data:
+              name: "{{ room }}"
+              message: "⚡ SO ACTIF → Blueprint en retrait (preset none)"
+          - stop: "SO chauffe (mode passif)"
+
+  # 4) AWAY (seulement si SO ne chauffe pas OU si allow_solar_in_away = false)
+  - choose:
+      - conditions: "{{ is_away and not solar_can_override_away }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ current_preset != preset_away }}"
+            then:
+              - service: climate.set_preset_mode
+                target: { entity_id: "{{ climate }}" }
+                data: { preset_mode: "{{ preset_away }}" }
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: "🔒 Away → {{ preset_away|upper }}"
+          - stop: "Away appliqué"
+
+  # 5) THERMIQUE (hystérésis) – SEULEMENT si capteur + consigne configurés
+  - choose:
+      - conditions: "{{ has_thermal }}"
+        sequence:
+          - variables:
+              need_heat: "{{ t_room <= (sp - hys) }}"
+              need_idle: "{{ t_room >= (sp + hys) }}"
+
+          - choose:
+              - conditions: "{{ need_heat }}"
+                sequence:
+                  - if:
+                      - condition: template
+                        value_template: "{{ current_preset != preset_heat }}"
+                    then:
+                      - service: climate.set_preset_mode
+                        target: { entity_id: "{{ climate }}" }
+                        data: { preset_mode: "{{ preset_heat }}" }
+                      - service: logbook.log
+                        data:
+                          name: "{{ room }}"
+                          message: "🌡️ T° {{ t_room }}°C ≤ {{ sp - hys }}°C → HEAT"
+
+              - conditions: "{{ need_idle }}"
+                sequence:
+                  - if:
+                      - condition: template
+                        value_template: "{{ current_preset != preset_idle }}"
+                    then:
+                      - service: climate.set_preset_mode
+                        target: { entity_id: "{{ climate }}" }
+                        data: { preset_mode: "{{ preset_idle }}" }
+                      - service: logbook.log
+                        data:
+                          name: "{{ room }}"
+                          message: "🌡️ T° {{ t_room }}°C ≥ {{ sp + hys }}°C → IDLE"
+
+  # ✅ Si on arrive ici sans action = OK, on ne force rien

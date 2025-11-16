@@ -1,0 +1,291 @@
+blueprint:
+  name: HVAC – Thermostat Chauffage (Alarme = Eco/Confort) v3.0
+  description: >
+    Chauffage automatique selon l'état de l'alarme :
+    - ✅ Alarme armée → preset choisi (par défaut ECO)
+    - ✅ Alarme désarmée → preset choisi (par défaut COMFORT)
+    - ✅ Triggers d'alarme FIABLES (state)
+    - ✅ Fallback température COMPLET pour tous les presets
+    - ✅ Fenêtres, Été, Tick optimisé + logs conditionnels
+  domain: automation
+  author: LaCaseHome
+
+  input:
+    room_name:
+      name: Nom logique de la pièce
+      default: "Pièce"
+
+    climate_entity:
+      name: Thermostat (climate.*)
+      selector: { entity: { domain: climate } }
+
+    # Été (requis)
+    summer_entity:
+      name: Indicateur Été (calendar/input_boolean/sensor on/off) – ON = Été
+      selector: { entity: {} }
+
+    summer_behavior:
+      name: "Comportement en Été"
+      default: "off_in_summer"
+      selector:
+        select:
+          options:
+            - label: "Mettre le thermostat sur OFF"
+              value: "off_in_summer"
+            - label: "Ne rien faire"
+              value: "do_nothing"
+
+    # Fenêtres (optionnel)
+    window_sensors:
+      name: Capteurs fenêtre(s)/porte(s)
+      default: []
+      selector: { entity: { domain: binary_sensor, multiple: true } }
+
+    delay_open_min:
+      name: "Délai avant PAUSE (min) après ouverture"
+      default: 2
+      selector: { number: { min: 0, max: 60, step: 1 } }
+
+    delay_close_min:
+      name: "Délai avant REPRISE (min) après fermeture"
+      default: 2
+      selector: { number: { min: 0, max: 60, step: 1 } }
+
+    # Alarme + presets
+    alarm_entity:
+      name: Alarme / Présence (Away si armée)
+      description: "Armed_* = armée (Away). Disarmed = présent."
+      default: ""
+      selector: { entity: { domain: alarm_control_panel } }
+
+    preset_when_armed:
+      name: "Preset quand ARMÉE"
+      default: eco
+      selector:
+        select:
+          options: [eco, comfort, comfort-1, comfort-2, frost_protection, boost, none]
+
+    preset_when_disarmed:
+      name: "Preset quand DÉSARMÉE"
+      default: comfort
+      selector:
+        select:
+          options: [eco, comfort, comfort-1, comfort-2, frost_protection, boost, none]
+
+    # Températures fallback (AMÉLIORÉ)
+    comfort_temp:
+      name: "Température Confort (°C) (fallback)"
+      default: 21
+      selector: { number: { min: 16, max: 24, step: 0.5 } }
+
+    eco_temp:
+      name: "Température Eco (°C) (fallback)"
+      default: 18.5
+      selector: { number: { min: 12, max: 22, step: 0.5 } }
+
+    frost_temp:
+      name: "Température Hors-gel (°C) (fallback)"
+      default: 7
+      selector: { number: { min: 5, max: 15, step: 0.5 } }
+
+    boost_temp:
+      name: "Température Boost (°C) (fallback)"
+      default: 23
+      selector: { number: { min: 20, max: 28, step: 0.5 } }
+
+    # Tick
+    tick_minutes:
+      name: "Fréquence ré-application (0 = désactivé)"
+      default: "10"
+      selector:
+        select:
+          options:
+            - label: "Désactivé"
+              value: "0"
+            - label: "5 min"
+              value: "5"
+            - label: "10 min"
+              value: "10"
+            - label: "15 min"
+              value: "15"
+
+mode: restart
+max_exceeded: silent
+
+variables:
+  room: !input room_name
+  climate: !input climate_entity
+  summer_entity_id: !input summer_entity
+  window_sensors_list: !input window_sensors
+  alarm_id: !input alarm_entity
+  summer_behavior_sel: !input summer_behavior
+  comfort_t: !input comfort_temp
+  eco_t: !input eco_temp
+  frost_t: !input frost_temp
+  boost_t: !input boost_temp
+  tick_m: !input tick_minutes
+  preset_armed: !input preset_when_armed
+  preset_disarmed: !input preset_when_disarmed
+
+trigger:
+  # Fenêtres
+  - id: win_open
+    platform: state
+    entity_id: !input window_sensors
+    to: "on"
+    for: { minutes: !input delay_open_min }
+
+  - id: win_close
+    platform: state
+    entity_id: !input window_sensors
+    to: "off"
+    for: { minutes: !input delay_close_min }
+
+  # Été
+  - id: season_change
+    platform: state
+    entity_id: !input summer_entity
+
+  # 🔔 Alarme – triggers STATE explicites
+  - id: alarm_armed
+    platform: state
+    entity_id: !input alarm_entity
+    to:
+      - armed_away
+      - armed_home
+      - armed_night
+
+  - id: alarm_disarmed
+    platform: state
+    entity_id: !input alarm_entity
+    to: disarmed
+
+  # Tick optimisé
+  - id: periodic
+    platform: template
+    value_template: >-
+      {% if tick_m is defined %}
+        {% set m = tick_m | int(0) %}
+        {% if m > 0 %}
+          {{ now().minute % m == 0 and now().second < 5 }}
+        {% else %}
+          false
+        {% endif %}
+      {% else %}
+        false
+      {% endif %}
+ 
+action:
+  # Variables runtime
+  - variables:
+      is_summer: >-
+        {% set e = summer_entity_id %}
+        {% if not e %}false{% else %}
+          {% set st = states(e) | lower %}
+          {{ st in ['on','true','open','summer','été','ete'] }}
+        {% endif %}
+      win_any_open: "{{ expand(window_sensors_list) | selectattr('state','eq','on') | list | count > 0 }}"
+      is_away: >-
+        {% if alarm_id and alarm_id != '' %}
+          {% set st = (states(alarm_id) | string) | lower %}
+          {{ st in ['armed_away','armed_home','armed_night'] }}
+        {% else %}false{% endif %}
+      target_preset: "{{ preset_armed if is_away else preset_disarmed }}"
+      presets: "{{ state_attr(climate,'preset_modes') or [] }}"
+      has_target: "{{ target_preset in presets }}"
+      current_preset: "{{ state_attr(climate,'preset_mode') }}"
+      current_mode: "{{ states(climate) }}"
+      current_temp: "{{ state_attr(climate,'temperature') | float(default=-999) }}"
+      trig: "{{ trigger.id | default('periodic') }}"
+
+  # Politique Été (OFF)
+  - choose:
+      - conditions: "{{ is_summer and summer_behavior_sel == 'off_in_summer' }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ current_mode != 'off' }}"
+            then:
+              - service: climate.set_hvac_mode
+                target: { entity_id: "{{ climate }}" }
+                data: { hvac_mode: "off" }
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: "☀️ Été → OFF"
+          - stop: "Été OFF"
+
+  # Fenêtre ouverte → OFF
+  - choose:
+      - conditions: "{{ win_any_open }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ current_mode != 'off' }}"
+            then:
+              - service: climate.set_hvac_mode
+                target: { entity_id: "{{ climate }}" }
+                data: { hvac_mode: "off" }
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: "🪟 Fenêtre ouverte → OFF"
+          - stop: "Pause fenêtre"
+
+  # Forcer mode HEAT (thermostat chauffage)
+  - if:
+      - condition: template
+        value_template: "{{ current_mode != 'heat' }}"
+    then:
+      - service: climate.set_hvac_mode
+        target: { entity_id: "{{ climate }}" }
+        data: { hvac_mode: "heat" }
+      - service: logbook.log
+        data:
+          name: "{{ room }}"
+          message: "🔥 Mode HEAT activé"
+
+  # Appliquer PRESET (ou fallback COMPLET)
+  - choose:
+      # A) Si le preset cible est supporté → on l'applique
+      - conditions: "{{ has_target and target_preset != 'none' }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ current_preset != target_preset }}"
+            then:
+              - service: climate.set_preset_mode
+                target: { entity_id: "{{ climate }}" }
+                data: { preset_mode: "{{ target_preset }}" }
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: >-
+                    {{ '🔒 Away' if is_away else '🏠 Présent' }} → {{ target_preset|upper }}
+
+      # B) Fallback si preset non supporté (COMPLET)
+      - conditions: "{{ not has_target or target_preset == 'none' }}"
+        sequence:
+          - variables:
+              fallback_temp: >-
+                {% if target_preset == 'eco' %} {{ eco_t }}
+                {% elif target_preset == 'comfort' %} {{ comfort_t }}
+                {% elif target_preset == 'comfort-1' %} {{ (comfort_t - 1) | round(1) }}
+                {% elif target_preset == 'comfort-2' %} {{ (comfort_t - 2) | round(1) }}
+                {% elif target_preset == 'frost_protection' %} {{ frost_t }}
+                {% elif target_preset == 'boost' %} {{ boost_t }}
+                {% else %} {{ comfort_t }}
+                {% endif %}
+
+          - if:
+              - condition: template
+                value_template: "{{ current_temp != fallback_temp|float }}"
+            then:
+              - service: climate.set_temperature
+                target: { entity_id: "{{ climate }}" }
+                data: { temperature: "{{ fallback_temp|float }}" }
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: >-
+                    {{ '🔒 Away' if is_away else '🏠 Présent' }} → preset {{ target_preset|upper }} indisponible → fallback {{ fallback_temp }}°C
