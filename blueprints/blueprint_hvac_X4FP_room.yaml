@@ -1,5 +1,5 @@
 blueprint:
-  name: "HVAC – X4FP (Thermique + SO compatible) v7.2 [Fixed None]"
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.3"
   description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix: trigger SO conditionnel si configuré. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique."
   domain: automation
   author: LaCaseHome
