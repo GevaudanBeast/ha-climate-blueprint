@@ -149,20 +149,11 @@ trigger:
   - id: optional_entities_change
     platform: template
     value_template: >-
-      {% set summer = summer_id %}
-      {% set alarm = alarm_id %}
-      {% set solar = solar_switch_id %}
-      {% set changes = [] %}
-      {% if summer and summer != '' %}
-        {% set changes = changes + [states(summer)] %}
-      {% endif %}
-      {% if alarm and alarm != '' %}
-        {% set changes = changes + [states(alarm)] %}
-      {% endif %}
-      {% if solar and solar != '' %}
-        {% set changes = changes + [states(solar)] %}
-      {% endif %}
-      {{ changes | join(',') }}
+      {{ [
+        states(summer_id) if summer_id else none,
+        states(alarm_id) if alarm_id else none,
+        states(solar_switch_id) if solar_switch_id else none
+      ] | reject('none') | join(',') }}
 
   # Tick périodique (optimisé)
   - id: periodic
@@ -221,12 +212,7 @@ variables:
     {% endif %}
 
   # Clamp consigne
-  sp: >-
-    {% set s = sp_raw %}
-    {% if s < sp_min %} {{ sp_min }}
-    {% elif s > sp_max %} {{ sp_max }}
-    {% else %} {{ s }}
-    {% endif %}
+  sp: "{{ [[sp_raw, sp_max] | min, sp_min] | max }}"
 
   # Été / Away / Solaire
   is_summer: "{{ summer_id != '' and is_state(summer_id, 'on') }}"
@@ -242,8 +228,7 @@ variables:
 
   # Fenêtres
   win_any_open: >-
-    {% set ws = window_sensors_list | default([]) %}
-    {{ expand(ws) | selectattr('state','eq','on') | list | count > 0 }}
+    {{ expand(window_sensors_list) | selectattr('state','eq','on') | list | count > 0 }}
 
   # Config thermique
   has_thermal: "{{ temp_id != '' and sp_id != '' }}"

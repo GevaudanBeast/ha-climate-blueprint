@@ -141,20 +141,11 @@ trigger:
   - id: optional_entities_change
     platform: template
     value_template: >-
-      {% set summer = summer_entity_id %}
-      {% set alarm = alarm_id %}
-      {% set solar = solar_id %}
-      {% set changes = [] %}
-      {% if summer and summer != '' %}
-        {% set changes = changes + [states(summer)] %}
-      {% endif %}
-      {% if alarm and alarm != '' %}
-        {% set changes = changes + [states(alarm)] %}
-      {% endif %}
-      {% if solar and solar != '' %}
-        {% set changes = changes + [states(solar)] %}
-      {% endif %}
-      {{ changes | join(',') }}
+      {{ [
+        states(summer_entity_id) if summer_entity_id else none,
+        states(alarm_id) if alarm_id else none,
+        states(solar_id) if solar_id else none
+      ] | reject('none') | join(',') }}
 
   # Tick (optimisé)
   - id: periodic
@@ -199,7 +190,6 @@ action:
 
       current_mode: "{{ states(climate) }}"
       current_preset: "{{ state_attr(climate, 'preset_mode') or '' }}"
-      current_temp: "{{ state_attr(climate,'temperature') | float(default=-9999) }}"
       presets: "{{ state_attr(climate, 'preset_modes') or [] }}"
 
   # 1) Fenêtres ouvertes → OFF (prioritaire même sur SO)

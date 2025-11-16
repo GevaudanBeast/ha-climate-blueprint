@@ -179,24 +179,18 @@ action:
   # Variables runtime
   - variables:
       is_summer: >-
-        {% set e = summer_entity_id %}
-        {% if not e %}false{% else %}
-          {% set st = states(e) | lower %}
-          {{ st in ['on','true','open','summer','été','ete'] }}
-        {% endif %}
+        {{ summer_entity_id and
+           states(summer_entity_id) | lower in ['on','true','open'] }}
       win_any_open: "{{ expand(window_sensors_list) | selectattr('state','eq','on') | list | count > 0 }}"
       is_away: >-
-        {% if alarm_id and alarm_id != '' %}
-          {% set st = (states(alarm_id) | string) | lower %}
-          {{ st in ['armed_away','armed_home','armed_night'] }}
-        {% else %}false{% endif %}
+        {{ alarm_id and
+           states(alarm_id).startswith('armed') }}
       target_preset: "{{ preset_armed if is_away else preset_disarmed }}"
       presets: "{{ state_attr(climate,'preset_modes') or [] }}"
       has_target: "{{ target_preset in presets }}"
       current_preset: "{{ state_attr(climate,'preset_mode') }}"
       current_mode: "{{ states(climate) }}"
       current_temp: "{{ state_attr(climate,'temperature') | float(default=-999) }}"
-      trig: "{{ trigger.id | default('periodic') }}"
 
   # Politique Été (OFF)
   - choose:
