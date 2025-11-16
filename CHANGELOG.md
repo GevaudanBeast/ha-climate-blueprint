@@ -7,6 +7,40 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2025-01-16] - Corrections bugs et améliorations
+
+### 🐛 Corrections Critiques
+- **Room Thermostat v2.2** : Correction bug variable `current_temp` manquante
+  - Variable utilisée ligne 313 mais non définie
+  - Impact : Blueprint NON FONCTIONNEL pour application température
+  - Fix : Ajout `current_temp` dans variables runtime (ligne 194)
+  - **Origine** : Suppression accidentelle lors simplification du 15 janvier
+
+### ✨ Améliorations
+- **Thermostat Heat v3.2** : Triggers alarme conditionnels
+  - Remplacé 2 triggers `state` par 1 trigger `template` conditionnel
+  - Automation maintenant créable SANS alarme configurée
+  - Cohérence avec Room Thermostat et X4FP blueprints
+  - Réduction -13 lignes de code
+
+### 📝 Documentation
+- **Room Thermostat** : Description `alarm_entity` clarifiée "Requis" → "Optionnel"
+- **Thermostat Heat** : Description `alarm_entity` clarifiée
+- Ajout `RAPPORT_CONTROLE_EXECUTION.md` (contrôle minutieux 4 blueprints)
+- Ajout `VERIFICATION_CORRECTIONS.md` (validation corrections)
+
+### 🔧 Versions
+- Room Thermostat : v2.1 → **v2.2**
+- Thermostat Heat : v3.1 → **v3.2**
+
+### ✅ Statut Final
+- Room Thermostat v2.2 : 🟢 FONCTIONNEL (était NON FONCTIONNEL)
+- Thermostat Heat v3.2 : 🟢 FONCTIONNEL (avec ou sans alarme)
+- X4FP Bathroom v7.3 : 🟢 FONCTIONNEL
+- X4FP Room v7.3 : 🟢 FONCTIONNEL
+
+---
+
 ## [2025-01-16] - Uniformisation et optimisations finales
 
 ### 🔧 Modifié
@@ -119,11 +153,13 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 ## Versions des Blueprints
 
 ### HVAC – Thermostat Chauffage (Alarme = Eco/Confort)
+- **v3.2** (2025-01-16) : Triggers alarme conditionnels, automation créable sans alarme
 - **v3.1** (2025-01-16) : Uniformisation tick variable
 - **v3.0** (2025-01-15) : Simplifications templates, suppression variable inutilisée
 - **v2.x** : Versions antérieures (non documentées)
 
 ### HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO
+- **v2.2** (2025-01-16) : Correction bug current_temp manquante (critique)
 - **v2.1** (2025-01-16) : Uniformisation tick variable
 - **v2.0** (2025-01-15) : Simplifications templates, suppression variable inutilisée
 - **v1.x** : Versions antérieures (non documentées)

@@ -1,5 +1,5 @@
 blueprint:
-  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.1"
+  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.2"
   description: "Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
   domain: automation
   author: LaCaseHome
@@ -55,7 +55,7 @@ blueprint:
 
     alarm_entity:
       name: Alarme / Présence (Away si armée)
-      description: "Requis pour gérer preset away/home automatiquement."
+      description: "Optionnel. Si configuré, gère preset away/home automatiquement."
       default: ""
       selector:
         entity:
@@ -191,6 +191,7 @@ action:
       current_mode: "{{ states(climate) }}"
       current_preset: "{{ state_attr(climate, 'preset_mode') or '' }}"
       presets: "{{ state_attr(climate, 'preset_modes') or [] }}"
+      current_temp: "{{ state_attr(climate, 'temperature') | float(0) }}"
 
   # 1) Fenêtres ouvertes → OFF (prioritaire même sur SO)
   - choose:
