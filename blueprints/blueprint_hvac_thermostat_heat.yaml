@@ -1,5 +1,5 @@
 blueprint:
-  name: HVAC – Thermostat Chauffage (Alarme = Eco/Confort) v3.0
+  name: HVAC – Thermostat Chauffage (Alarme = Eco/Confort) v3.2
   description: >
     Chauffage automatique selon l'état de l'alarme :
     - ✅ Alarme armée → preset choisi (par défaut ECO)
@@ -54,7 +54,7 @@ blueprint:
     # Alarme + presets
     alarm_entity:
       name: Alarme / Présence (Away si armée)
-      description: "Armed_* = armée (Away). Disarmed = présent."
+      description: "Optionnel. Armed_* = armée (Away). Disarmed = présent."
       default: ""
       selector: { entity: { domain: alarm_control_panel } }
 
@@ -123,7 +123,7 @@ variables:
   eco_t: !input eco_temp
   frost_t: !input frost_temp
   boost_t: !input boost_temp
-  tick_m: !input tick_minutes
+  tick_minutes: !input tick_minutes
   preset_armed: !input preset_when_armed
   preset_disarmed: !input preset_when_disarmed
 
@@ -146,26 +146,18 @@ trigger:
     platform: state
     entity_id: !input summer_entity
 
-  # 🔔 Alarme – triggers STATE explicites
-  - id: alarm_armed
-    platform: state
-    entity_id: !input alarm_entity
-    to:
-      - armed_away
-      - armed_home
-      - armed_night
-
-  - id: alarm_disarmed
-    platform: state
-    entity_id: !input alarm_entity
-    to: disarmed
+  # Alarme (OPTIONNEL) via TEMPLATE pour gérer les valeurs vides
+  - id: alarm_change
+    platform: template
+    value_template: >-
+      {{ states(alarm_id) if alarm_id and alarm_id != '' else 'none' }}
 
   # Tick optimisé
   - id: periodic
     platform: template
     value_template: >-
-      {% if tick_m is defined %}
-        {% set m = tick_m | int(0) %}
+      {% if tick_minutes is defined %}
+        {% set m = tick_minutes | int(0) %}
         {% if m > 0 %}
           {{ now().minute % m == 0 and now().second < 5 }}
         {% else %}

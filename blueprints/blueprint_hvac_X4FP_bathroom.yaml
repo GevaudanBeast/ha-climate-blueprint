@@ -1,5 +1,5 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.2 [Fixed None]"
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.3"
   description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix: trigger SO conditionnel. ORDRE: Été > Fenêtre > SO ACTIF > Away > Lumière."
   domain: automation
   author: LaCaseHome
