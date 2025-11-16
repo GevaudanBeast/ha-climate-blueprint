@@ -159,27 +159,18 @@ trigger:
   - id: optional_entities_change
     platform: template
     value_template: >-
-      {% set summer = summer_id %}
-      {% set alarm = alarm_id %}
-      {% set solar = solar_switch_id %}
-      {% set changes = [] %}
-      {% if summer and summer != '' %}
-        {% set changes = changes + [states(summer)] %}
-      {% endif %}
-      {% if alarm and alarm != '' %}
-        {% set changes = changes + [states(alarm)] %}
-      {% endif %}
-      {% if solar and solar != '' %}
-        {% set changes = changes + [states(solar)] %}
-      {% endif %}
-      {{ changes | join(',') }}
+      {{ [
+        states(summer_id) if summer_id else none,
+        states(alarm_id) if alarm_id else none,
+        states(solar_switch_id) if solar_switch_id else none
+      ] | reject('none') | join(',') }}
 
   # Tick périodique (optimisé)
   - id: periodic
     platform: template
     value_template: >-
-      {% if tick_m is defined %}
-        {% set m = tick_m | int(0) %}
+      {% if tick_minutes is defined %}
+        {% set m = tick_minutes | int(0) %}
         {% if m > 0 %}
           {{ now().minute % m == 0 and now().second < 5 }}
         {% else %}
@@ -226,8 +217,7 @@ variables:
   solar_can_override_away: "{{ allow_solar_in_away and solar_is_heating }}"
 
   win_any_open: >-
-    {% set ws = window_sensors_list | default([]) %}
-    {{ expand(ws) | selectattr('state','eq','on') | list | count > 0 }}
+    {{ expand(window_sensors_list) | selectattr('state','eq','on') | list | count > 0 }}
 
 condition: []
 
