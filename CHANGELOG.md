@@ -7,6 +7,31 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2025-01-16] - Correction bug déclenchement inopinée X4FP Bathroom
+
+### 🐛 Correction Critique
+- **X4FP Bathroom v7.4** : Correction bug déclenchement inopinée
+  - Variable `should_act_on_light` trop permissive
+  - **Symptôme** : Chauffage passait en COMFORT à chaque tick/alarme/SO si lumière allumée
+  - **Cause** : Logique OR incluait état lumière actuel (ligne 326-328)
+  - **Fix** : Lumière agit UNIQUEMENT sur changements light_on/light_off
+  - **Impact** : Blueprint ne se déclenche plus de façon inopinée
+
+### 🔧 Version
+- X4FP Bathroom : v7.3 → **v7.4**
+
+### ✅ Comportement corrigé
+**AVANT (v7.3) - BUGGÉ :**
+- Lumière ON → Tick périodique → COMFORT (non désiré)
+- Lumière ON → Alarme change → COMFORT (non désiré)
+- Lumière ON → Solar Optimizer → COMFORT (non désiré)
+
+**APRÈS (v7.4) - CORRIGÉ :**
+- Lumière ON uniquement → COMFORT ✅
+- Tick/alarme/SO ne touchent plus lumière ✅
+
+---
+
 ## [2025-01-16] - Corrections bugs et améliorations
 
 ### 🐛 Corrections Critiques
@@ -165,6 +190,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - **v1.x** : Versions antérieures (non documentées)
 
 ### HVAC – X4FP Salle de bain (Lumière + SO compatible)
+- **v7.4** (2025-01-16) : Correction bug déclenchement inopinée (lumière stricte)
 - **v7.3** (2025-01-16) : Nettoyage nom version
 - **v7.2** (2025-01-15) : Correction critique bug tick_m, simplifications
 - **v7.x** : Versions antérieures (non documentées)
