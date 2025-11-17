@@ -7,6 +7,32 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2025-01-16] - Correction bug alarme Thermostat Heat
+
+### 🐛 Correction Critique
+- **Thermostat Heat v3.3** : Correction bug alarme ne déclenche pas changement preset
+  - **Symptôme** : Alarme armée/désarmée ne change pas eco/confort
+  - **Cause** : Trigger template v3.2 utilisait variable `alarm_id` non accessible
+  - **Explication** : Variables `variables:` inaccessibles dans section `trigger:`
+  - **Fix** : Retour triggers `platform: state` sur entité alarme directement
+  - **Impact** : Changements alarme déclenchent maintenant correctement automation
+
+### 🔧 Version
+- Thermostat Heat : v3.2 → **v3.3**
+
+### ✅ Comportement corrigé
+**AVANT (v3.2) - BUGGÉ :**
+- Alarme armed → ❌ Reste en preset actuel (pas de changement)
+- Alarme disarmed → ❌ Reste en preset actuel (pas de changement)
+- Trigger template ne se déclenchait jamais
+
+**APRÈS (v3.3) - CORRIGÉ :**
+- Alarme armed → ✅ ECO (ou preset configuré)
+- Alarme disarmed → ✅ COMFORT (ou preset configuré)
+- Triggers state fonctionnels
+
+---
+
 ## [2025-01-16] - Correction bug déclenchement inopinée X4FP Bathroom
 
 ### 🐛 Correction Critique
@@ -178,7 +204,8 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 ## Versions des Blueprints
 
 ### HVAC – Thermostat Chauffage (Alarme = Eco/Confort)
-- **v3.2** (2025-01-16) : Triggers alarme conditionnels, automation créable sans alarme
+- **v3.3** (2025-01-16) : Correction bug triggers alarme (retour platform: state)
+- **v3.2** (2025-01-16) : ❌ BUGGUÉ - Triggers template avec variable inaccessible
 - **v3.1** (2025-01-16) : Uniformisation tick variable
 - **v3.0** (2025-01-15) : Simplifications templates, suppression variable inutilisée
 - **v2.x** : Versions antérieures (non documentées)
