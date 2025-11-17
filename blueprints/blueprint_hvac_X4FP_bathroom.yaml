@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.3"
-  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix: trigger SO conditionnel. ORDRE: Été > Fenêtre > SO ACTIF > Away > Lumière."
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.4"
+  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix: lumière agit uniquement sur changement (pas tick/alarme). ORDRE: Été > Fenêtre > SO ACTIF > Away > Lumière."
   domain: automation
   author: LaCaseHome
 
@@ -320,12 +320,10 @@ action:
                   message: "🔒 Away → {{ preset_away|upper }}"
           - stop: "Away appliqué"
 
-  # 5) LUMIÈRE – actions conditionnelles
+  # 5) LUMIÈRE – actions conditionnelles (STRICTE: uniquement sur changement lumière)
   - variables:
       should_act_on_light: >-
-        {{ (trigger.id in ['light_on', 'light_off']) or
-           (is_light_on and light_on_behavior != 'none') or
-           (not is_light_on and light_off_behavior != 'none') }}
+        {{ trigger.id in ['light_on', 'light_off'] }}
 
   - choose:
       # ============ ON behaviors ============
