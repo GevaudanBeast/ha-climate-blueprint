@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP (Thermique + SO compatible) v7.3"
-  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix: trigger SO conditionnel si configuré. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique."
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.4"
+  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.4: Force ECO par défaut si pas de gestion thermique. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique > ECO (défaut)."
   domain: automation
   author: LaCaseHome
 
@@ -369,5 +369,17 @@ action:
                         data:
                           name: "{{ room }}"
                           message: "🌡️ T° {{ t_room }}°C ≥ {{ sp + hys }}°C → IDLE"
+
+  # 6) ECO par défaut (si pas de gestion thermique configurée)
+  - choose:
+      - conditions: "{{ not has_thermal and current_preset != preset_idle }}"
+        sequence:
+          - service: climate.set_preset_mode
+            target: { entity_id: "{{ climate }}" }
+            data: { preset_mode: "{{ preset_idle }}" }
+          - service: logbook.log
+            data:
+              name: "{{ room }}"
+              message: "🏠 Présent (pas de gestion thermique) → ECO"
 
   # ✅ Si on arrive ici sans action = OK, on ne force rien
