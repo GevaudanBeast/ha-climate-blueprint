@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.4"
-  description: "Fix v2.4: respect état alarme dans section saisonnière. Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
+  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.5"
+  description: "Fix v2.5: solar_active vérifie attribut is_active (au lieu de state). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
   domain: automation
   author: LaCaseHome
 
@@ -64,6 +64,7 @@ blueprint:
     # Solar Optimizer (OPTIONNEL)
     solar_enable:
       name: "Solar Optimizer – ACTIVE switch (ex: switch.solar_optimizer_xxx)"
+      description: "Le blueprint vérifie l'attribut 'is_active' (ou l'état si switch classique). Laisser vide si pas de SO."
       default: ""
       selector:
         entity:
@@ -175,7 +176,14 @@ condition: []
 action:
   # Variables runtime
   - variables:
-      solar_active: "{{ solar_id != '' and is_state(solar_id, 'on') }}"
+      # ⭐ Logique SO - Surveille is_active (pour SO) ou state (pour switch classique)
+      solar_active: >-
+        {% if solar_id != '' %}
+          {% set active_attr = state_attr(solar_id, 'is_active') %}
+          {{ (active_attr == true) if (active_attr != None) else is_state(solar_id, 'on') }}
+        {% else %}
+          false
+        {% endif %}
 
       win_any_open: >-
         {{ expand(window_sensors_list) | selectattr('state','eq','on') | list | count > 0 }}
