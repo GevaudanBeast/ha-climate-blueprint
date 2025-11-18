@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP (Thermique + SO compatible) v7.8"
-  description: "X4FP avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.8: solar_is_heating vérifie is_active au lieu de state. ORDRE: Été > Fenêtre > SO ACTIF (si autorisé en Away) > Away > Thermique (si non Away + capteur valide)."
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.9"
+  description: "X4FP avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.9: trigger solar_change surveille is_active (réactivité immédiate). ORDRE: Été > Fenêtre > SO ACTIF (si autorisé en Away) > Away > Thermique (si non Away + capteur valide)."
   domain: automation
   author: LaCaseHome
 
@@ -171,7 +171,12 @@ trigger:
   - id: solar_change
     platform: template
     value_template: >-
-      {{ solar_switch_id != '' and states(solar_switch_id) }}
+      {% if solar_switch_id != '' %}
+        {% set active_attr = state_attr(solar_switch_id, 'is_active') %}
+        {{ (active_attr == true) if (active_attr != None) else is_state(solar_switch_id, 'on') }}
+      {% else %}
+        false
+      {% endif %}
 
   # Tick périodique (optimisé)
   - id: periodic
