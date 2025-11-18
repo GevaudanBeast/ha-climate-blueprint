@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.12"
-  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.12: LUMIÈRE PRIORITAIRE sur SO (évite boucle circulaire jour/nuit). Section SO active UNIQUEMENT si lumière OFF. ORDRE: Été > Fenêtre > SO ACTIF (si lumière OFF + autorisé en Away) > Away > Lumière (si non Away)."
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.13"
+  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.13: SO ignoré lors de l'extinction lumière (évite boucle circulaire SO→COMFORT→SO). Section SO skip si trigger=light_off. ORDRE: Été > Fenêtre > SO ACTIF (si lumière OFF + pas trigger light_off + autorisé en Away) > Away > Lumière (si non Away)."
   domain: automation
   author: LaCaseHome
 
@@ -299,7 +299,7 @@ action:
 
   # ⭐ 3) SOLAIRE ACTIF (switch.solar_optimizer_xxx = ON) - PRIORITÉ (si autorisé en Away)
   - choose:
-      - conditions: "{{ not is_light_on and solar_is_heating and solar_preset != 'none' and (not is_away or allow_solar_in_away) }}"
+      - conditions: "{{ not is_light_on and trigger.id != 'light_off' and solar_is_heating and solar_preset != 'none' and (not is_away or allow_solar_in_away) }}"
         sequence:
           - if:
               - condition: template
@@ -314,7 +314,7 @@ action:
                   message: "⚡ SO ACTIF ({{ solar_switch_id }}) → {{ solar_preset|upper }}"
           - stop: "SO chauffe activement"
 
-      - conditions: "{{ not is_light_on and solar_is_heating and solar_preset == 'none' and (not is_away or allow_solar_in_away) }}"
+      - conditions: "{{ not is_light_on and trigger.id != 'light_off' and solar_is_heating and solar_preset == 'none' and (not is_away or allow_solar_in_away) }}"
         sequence:
           - service: logbook.log
             data:
