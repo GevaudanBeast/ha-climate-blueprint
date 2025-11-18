@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.6"
-  description: "Fix v2.6: trigger solar_change surveille is_active (réactivité immédiate). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
+  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.7"
+  description: "Fix v2.7: SO actif UNIQUEMENT de JOUR (évite boucle circulaire la nuit). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
   domain: automation
   author: LaCaseHome
 
@@ -161,6 +161,11 @@ trigger:
         false
       {% endif %}
 
+  # Lever/coucher du soleil (pour limiter SO au jour)
+  - id: sun_change
+    platform: state
+    entity_id: sun.sun
+
   # Tick (optimisé)
   - id: periodic
     platform: template
@@ -189,6 +194,9 @@ action:
         {% else %}
           false
         {% endif %}
+
+      # Détection jour/nuit (pour limiter SO au jour uniquement)
+      is_daytime: "{{ is_state('sun.sun', 'above_horizon') }}"
 
       win_any_open: >-
         {{ expand(window_sensors_list) | selectattr('state','eq','on') | list | count > 0 }}
@@ -235,7 +243,7 @@ action:
 
   # ⭐ 2) SOLAIRE (PRIORITÉ AVANT AWAY)
   - choose:
-      - conditions: "{{ solar_active }}"
+      - conditions: "{{ is_daytime and solar_active }}"
         sequence:
           - service: logbook.log
             data:
