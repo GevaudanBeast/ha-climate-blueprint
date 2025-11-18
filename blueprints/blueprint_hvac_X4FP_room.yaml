@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP (Thermique + SO compatible) v7.5"
-  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.5: respect état alarme dans section thermique. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique (si non Away)."
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.6"
+  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.6: réactivité immédiate température/consigne + protection capteur unavailable. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique (si non Away + capteur valide)."
   domain: automation
   author: LaCaseHome
 
@@ -145,6 +145,16 @@ trigger:
     to: "off"
     for: { minutes: !input delay_close_min }
 
+  # Température (trigger si configurée) - RÉACTIVITÉ IMMÉDIATE
+  - id: temp_change
+    platform: state
+    entity_id: !input room_temp_sensor
+
+  # Consigne (trigger si configurée) - RÉACTIVITÉ IMMÉDIATE
+  - id: setpoint_change
+    platform: state
+    entity_id: !input setpoint_number
+
   # Alarme (trigger si configurée)
   - id: alarm_change
     platform: template
@@ -205,13 +215,24 @@ variables:
 
   tick_minutes: !input tick_minutes
 
-  # Valeurs
-  t_room: >-
+  # Valeurs température (avec validation)
+  temp_state: >-
     {% if temp_id and temp_id != '' %}
-      {{ states(temp_id) | float(0) }}
+      {{ states(temp_id) }}
+    {% else %}
+      {{ 'unknown' }}
+    {% endif %}
+
+  temp_valid: >-
+    {{ temp_state not in ['unavailable', 'unknown', 'none', ''] }}
+
+  t_room: >-
+    {% if temp_valid %}
+      {{ temp_state | float(0) }}
     {% else %}
       {{ 0.0 }}
     {% endif %}
+
   sp_raw: >-
     {% if sp_id and sp_id != '' %}
       {{ states(sp_id) | float(0) }}
@@ -229,7 +250,7 @@ variables:
       {% set st = states(alarm_id) | lower %}
       {{ st.startswith('armed') }}
     {% else %} false {% endif %}
-  
+
   # ⭐ Logique SO - Surveille le switch d'action
   solar_is_heating: "{{ solar_switch_id != '' and is_state(solar_switch_id, 'on') }}"
   solar_can_override_away: "{{ allow_solar_in_away and solar_is_heating }}"
@@ -238,8 +259,8 @@ variables:
   win_any_open: >-
     {{ expand(window_sensors_list) | selectattr('state','eq','on') | list | count > 0 }}
 
-  # Config thermique
-  has_thermal: "{{ temp_id != '' and sp_id != '' }}"
+  # Config thermique (nécessite capteur VALIDE)
+  has_thermal: "{{ temp_id != '' and sp_id != '' and temp_valid }}"
 
 condition: []
 
