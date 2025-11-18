@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP (Thermique + SO compatible) v7.4"
-  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.4: triggers séparés alarme/été/SO pour déclenchement fiable. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique."
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.5"
+  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.5: respect état alarme dans section thermique. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique (si non Away)."
   domain: automation
   author: LaCaseHome
 
@@ -341,9 +341,9 @@ action:
                   message: "🔒 Away → {{ preset_away|upper }}"
           - stop: "Away appliqué"
 
-  # 5) THERMIQUE (hystérésis) – SEULEMENT si capteur + consigne configurés
+  # 5) THERMIQUE (hystérésis) – SEULEMENT si capteur + consigne configurés ET non Away
   - choose:
-      - conditions: "{{ has_thermal }}"
+      - conditions: "{{ not is_away and has_thermal }}"
         sequence:
           - variables:
               need_heat: "{{ t_room <= (sp - hys) }}"

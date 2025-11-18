@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.3"
-  description: "Fix v2.3: triggers séparés alarme/été/SO pour déclenchement fiable. Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
+  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.4"
+  description: "Fix v2.4: respect état alarme dans section saisonnière. Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
   domain: automation
   author: LaCaseHome
 
@@ -295,37 +295,40 @@ action:
                       name: "{{ room }}"
                       message: "🏠 Alarme désarmée → Preset NONE (pas de 'home')"
 
-  # 4) Mode normal → bascule été/hiver + consigne
-  - variables:
-      target_mode: "{{ 'cool' if is_summer else 'heat' }}"
-      target_temp: "{{ cool_default if is_summer else heat_default }}"
+  # 4) Mode normal → bascule été/hiver + consigne (SEULEMENT si non Away)
+  - choose:
+      - conditions: "{{ not is_away }}"
+        sequence:
+          - variables:
+              target_mode: "{{ 'cool' if is_summer else 'heat' }}"
+              target_temp: "{{ cool_default if is_summer else heat_default }}"
 
-  # Appliquer le mode HVAC
-  - if:
-      - condition: template
-        value_template: "{{ current_mode != target_mode }}"
-    then:
-      - service: climate.set_hvac_mode
-        target:
-          entity_id: "{{ climate }}"
-        data:
-          hvac_mode: "{{ target_mode }}"
-      - service: logbook.log
-        data:
-          name: "{{ room }}"
-          message: "🌡️ Mode {{ target_mode|upper }} activé ({{ 'Été' if is_summer else 'Hiver' }})"
+          # Appliquer le mode HVAC
+          - if:
+              - condition: template
+                value_template: "{{ current_mode != target_mode }}"
+            then:
+              - service: climate.set_hvac_mode
+                target:
+                  entity_id: "{{ climate }}"
+                data:
+                  hvac_mode: "{{ target_mode }}"
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: "🌡️ Mode {{ target_mode|upper }} activé ({{ 'Été' if is_summer else 'Hiver' }})"
 
-  # Appliquer la température
-  - if:
-      - condition: template
-        value_template: "{{ current_temp != (target_temp | float) }}"
-    then:
-      - service: climate.set_temperature
-        target:
-          entity_id: "{{ climate }}"
-        data:
-          temperature: "{{ target_temp | float }}"
-      - service: logbook.log
-        data:
-          name: "{{ room }}"
-          message: "🌡️ Consigne {{ target_temp }}°C appliquée ({{ 'Été' if is_summer else 'Hiver' }})"
+          # Appliquer la température
+          - if:
+              - condition: template
+                value_template: "{{ current_temp != (target_temp | float) }}"
+            then:
+              - service: climate.set_temperature
+                target:
+                  entity_id: "{{ climate }}"
+                data:
+                  temperature: "{{ target_temp | float }}"
+              - service: logbook.log
+                data:
+                  name: "{{ room }}"
+                  message: "🌡️ Consigne {{ target_temp }}°C appliquée ({{ 'Été' if is_summer else 'Hiver' }})"
