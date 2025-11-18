@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP (Thermique + SO compatible) v7.7"
-  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.7: respect paramètre allow_solar_in_away. ORDRE: Été > Fenêtre > SO ACTIF (si autorisé en Away) > Away > Thermique (si non Away + capteur valide)."
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.8"
+  description: "X4FP avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.8: solar_is_heating vérifie is_active au lieu de state. ORDRE: Été > Fenêtre > SO ACTIF (si autorisé en Away) > Away > Thermique (si non Away + capteur valide)."
   domain: automation
   author: LaCaseHome
 
@@ -80,7 +80,7 @@ blueprint:
     # -------- SOLAIRE (OPTIONNEL) --------
     solar_switch:
       name: "Solar Optimizer – SWITCH D'ACTION (ex: switch.solar_optimizer_chauffage_suite_parentale)"
-      description: "Le switch que SO contrôle : ON = SO chauffe maintenant, OFF = SO ne chauffe pas. Laisser vide si pas de SO."
+      description: "Le switch que SO contrôle. Le blueprint vérifie l'attribut 'is_active' (ou l'état si switch classique). Laisser vide si pas de SO."
       default: ""
       selector:
         entity:
@@ -251,8 +251,14 @@ variables:
       {{ st.startswith('armed') }}
     {% else %} false {% endif %}
 
-  # ⭐ Logique SO - Surveille le switch d'action
-  solar_is_heating: "{{ solar_switch_id != '' and is_state(solar_switch_id, 'on') }}"
+  # ⭐ Logique SO - Surveille le switch d'action (is_active pour SO, state pour switch classique)
+  solar_is_heating: >-
+    {% if solar_switch_id != '' %}
+      {% set active_attr = state_attr(solar_switch_id, 'is_active') %}
+      {{ (active_attr == true) if (active_attr != None) else is_state(solar_switch_id, 'on') }}
+    {% else %}
+      false
+    {% endif %}
   solar_can_override_away: "{{ allow_solar_in_away and solar_is_heating }}"
 
   # Fenêtres
