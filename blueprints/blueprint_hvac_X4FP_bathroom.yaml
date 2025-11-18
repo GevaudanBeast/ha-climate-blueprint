@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.6"
-  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.6: triggers séparés alarme/été/SO pour déclenchement fiable + logique lumière continue. ORDRE: Été > Fenêtre > SO ACTIF > Away > Lumière."
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.7"
+  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.7: respect état alarme dans section lumière. ORDRE: Été > Fenêtre > SO ACTIF > Away > Lumière (si non Away)."
   domain: automation
   author: LaCaseHome
 
@@ -328,10 +328,10 @@ action:
                   message: "🔒 Away → {{ preset_away|upper }}"
           - stop: "Away appliqué"
 
-  # 5) LUMIÈRE – gestion continue (applique selon l'état actuel)
+  # 5) LUMIÈRE – gestion continue (applique selon l'état actuel) - SEULEMENT si non Away
   - choose:
       # ============ ON behaviors ============
-      - conditions: "{{ is_light_on and light_on_behavior == 'force_comfort' and current_preset != preset_heat }}"
+      - conditions: "{{ not is_away and is_light_on and light_on_behavior == 'force_comfort' and current_preset != preset_heat }}"
         sequence:
           - service: climate.set_preset_mode
             target: { entity_id: "{{ climate }}" }
@@ -341,7 +341,7 @@ action:
               name: "{{ room }}"
               message: "💡 ON → COMFORT ({{ preset_heat }})"
 
-      - conditions: "{{ is_light_on and light_on_behavior == 'force_eco' and current_preset != preset_idle }}"
+      - conditions: "{{ not is_away and is_light_on and light_on_behavior == 'force_eco' and current_preset != preset_idle }}"
         sequence:
           - service: climate.set_preset_mode
             target: { entity_id: "{{ climate }}" }
@@ -351,7 +351,7 @@ action:
               name: "{{ room }}"
               message: "💡 ON → ECO ({{ preset_idle }})"
 
-      - conditions: "{{ trigger.id == 'light_on' and light_on_behavior == 'toggle_on' }}"
+      - conditions: "{{ not is_away and trigger.id == 'light_on' and light_on_behavior == 'toggle_on' }}"
         sequence:
           - choose:
               - conditions: "{{ current_preset == preset_idle }}"
@@ -374,7 +374,7 @@ action:
                       message: "💡 ON (toggle) → ECO ({{ preset_idle }})"
 
       # ============ OFF behaviors ============
-      - conditions: "{{ (not is_light_on) and light_off_behavior == 'force_eco' and current_preset != preset_idle }}"
+      - conditions: "{{ not is_away and (not is_light_on) and light_off_behavior == 'force_eco' and current_preset != preset_idle }}"
         sequence:
           - service: climate.set_preset_mode
             target: { entity_id: "{{ climate }}" }
@@ -384,7 +384,7 @@ action:
               name: "{{ room }}"
               message: "💡 OFF → ECO ({{ preset_idle }})"
 
-      - conditions: "{{ (not is_light_on) and light_off_behavior == 'force_comfort' and current_preset != preset_heat }}"
+      - conditions: "{{ not is_away and (not is_light_on) and light_off_behavior == 'force_comfort' and current_preset != preset_heat }}"
         sequence:
           - service: climate.set_preset_mode
             target: { entity_id: "{{ climate }}" }

@@ -1,10 +1,10 @@
 blueprint:
-  name: HVAC – Thermostat Chauffage (Alarme = Eco/Confort) v3.3
+  name: HVAC – Thermostat Chauffage (Alarme = Eco/Confort) v3.4
   description: >
-    Fix v3.3: triggers séparés alarme/été pour déclenchement fiable.
+    Fix v3.4: vérification respect état alarme (déjà correct).
     Chauffage automatique selon l'état de l'alarme :
-    - ✅ Alarme armée → preset choisi (par défaut ECO)
-    - ✅ Alarme désarmée → preset choisi (par défaut COMFORT)
+    - ✅ Alarme armée → preset choisi (par défaut ECO) - RESPECTÉ
+    - ✅ Alarme désarmée → preset choisi (par défaut COMFORT) - RESPECTÉ
     - ✅ Triggers d'alarme/été FIABLES (template avec vérification)
     - ✅ Fallback température COMPLET pour tous les presets
     - ✅ Fenêtres, Été, Tick optimisé + logs conditionnels
