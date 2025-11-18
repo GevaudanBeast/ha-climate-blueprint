@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.5"
-  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.5: logique lumière en continu (maintient confort/eco selon état lumière). ORDRE: Été > Fenêtre > SO ACTIF > Away > Lumière."
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.6"
+  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.6: triggers séparés alarme/été/SO pour déclenchement fiable + logique lumière continue. ORDRE: Été > Fenêtre > SO ACTIF > Away > Lumière."
   domain: automation
   author: LaCaseHome
 
@@ -155,15 +155,23 @@ trigger:
     to: "off"
     for: { minutes: !input delay_close_min }
 
-  # Été / Away / Solar switch (OPTIONNELS) via TEMPLATE pour gérer les valeurs vides
-  - id: optional_entities_change
+  # Alarme (trigger si configurée)
+  - id: alarm_change
     platform: template
     value_template: >-
-      {{ [
-        states(summer_id) if summer_id else none,
-        states(alarm_id) if alarm_id else none,
-        states(solar_switch_id) if solar_switch_id else none
-      ] | reject('none') | join(',') }}
+      {{ alarm_id != '' and states(alarm_id) }}
+
+  # Été (trigger si configuré)
+  - id: summer_change
+    platform: template
+    value_template: >-
+      {{ summer_id != '' and states(summer_id) }}
+
+  # Solar Optimizer switch (trigger si configuré)
+  - id: solar_change
+    platform: template
+    value_template: >-
+      {{ solar_switch_id != '' and states(solar_switch_id) }}
 
   # Tick périodique (optimisé)
   - id: periodic

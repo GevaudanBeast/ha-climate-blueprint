@@ -1,11 +1,11 @@
-# Blueprint : X4FP Salle de Bain avec Lumière (v7.5)
+# Blueprint : X4FP Salle de Bain avec Lumière (v7.6)
 
 ## Description
 
 Blueprint pour sèche-serviettes ou radiateur fil pilote X4FP avec détection de présence via lumière et intégration Solar Optimizer prioritaire. Spécialement conçu pour salle de bain.
 
 **Fichier :** `blueprint_hvac_X4FP_bathroom.yaml`
-**Version :** 7.5
+**Version :** 7.6
 **Auteur :** LaCaseHome
 
 ---
@@ -505,6 +505,11 @@ Si vous voulez que SO chauffe seulement le matin :
 ---
 
 ## Changelog
+
+### v7.6
+- **Fix critique triggers alarme/été/SO** : Triggers séparés au lieu d'un template unique pour déclenchement fiable
+- Correction : l'alarme, l'été et le Solar Optimizer déclenchent maintenant correctement l'automatisation
+- Les changements d'état sont maintenant détectés immédiatement (plus besoin du tick pour appliquer)
 
 ### v7.5
 - **Fix logique lumière en continu** : La lumière maintient maintenant l'état confort/eco de manière continue
