@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP (Thermique + SO compatible) v7.6"
-  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.6: réactivité immédiate température/consigne + protection capteur unavailable. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique (si non Away + capteur valide)."
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.7"
+  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.7: respect paramètre allow_solar_in_away. ORDRE: Été > Fenêtre > SO ACTIF (si autorisé en Away) > Away > Thermique (si non Away + capteur valide)."
   domain: automation
   author: LaCaseHome
 
@@ -320,9 +320,9 @@ action:
                   message: "🪟 Fenêtre ouverte → PAUSE ({{ preset_window }})"
           - stop: "Pause fenêtre"
 
-  # ⭐ 3) SOLAIRE ACTIF (switch.solar_optimizer_xxx = ON) - PRIORITÉ ABSOLUE
+  # ⭐ 3) SOLAIRE ACTIF (switch.solar_optimizer_xxx = ON) - PRIORITÉ (si autorisé en Away)
   - choose:
-      - conditions: "{{ solar_is_heating and solar_preset != 'none' }}"
+      - conditions: "{{ solar_is_heating and solar_preset != 'none' and (not is_away or allow_solar_in_away) }}"
         sequence:
           - if:
               - condition: template
@@ -337,7 +337,7 @@ action:
                   message: "⚡ SO ACTIF ({{ solar_switch_id }}) → {{ solar_preset|upper }}"
           - stop: "SO chauffe activement"
 
-      - conditions: "{{ solar_is_heating and solar_preset == 'none' }}"
+      - conditions: "{{ solar_is_heating and solar_preset == 'none' and (not is_away or allow_solar_in_away) }}"
         sequence:
           - service: logbook.log
             data:

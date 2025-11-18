@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.7"
-  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.7: respect état alarme dans section lumière. ORDRE: Été > Fenêtre > SO ACTIF > Away > Lumière (si non Away)."
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.8"
+  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.8: respect paramètre allow_solar_in_away. ORDRE: Été > Fenêtre > SO ACTIF (si autorisé en Away) > Away > Lumière (si non Away)."
   domain: automation
   author: LaCaseHome
 
@@ -286,9 +286,9 @@ action:
                   message: "🪟 Fenêtre ouverte → PAUSE ({{ preset_window }})"
           - stop: "Pause fenêtre"
 
-  # ⭐ 3) SOLAIRE ACTIF (switch.solar_optimizer_xxx = ON) - PRIORITÉ ABSOLUE
+  # ⭐ 3) SOLAIRE ACTIF (switch.solar_optimizer_xxx = ON) - PRIORITÉ (si autorisé en Away)
   - choose:
-      - conditions: "{{ solar_is_heating and solar_preset != 'none' }}"
+      - conditions: "{{ solar_is_heating and solar_preset != 'none' and (not is_away or allow_solar_in_away) }}"
         sequence:
           - if:
               - condition: template
@@ -303,7 +303,7 @@ action:
                   message: "⚡ SO ACTIF ({{ solar_switch_id }}) → {{ solar_preset|upper }}"
           - stop: "SO chauffe activement"
 
-      - conditions: "{{ solar_is_heating and solar_preset == 'none' }}"
+      - conditions: "{{ solar_is_heating and solar_preset == 'none' and (not is_away or allow_solar_in_away) }}"
         sequence:
           - service: logbook.log
             data:
