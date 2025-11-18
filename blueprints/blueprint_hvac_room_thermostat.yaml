@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.2"
-  description: "Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
+  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.3"
+  description: "Fix v2.3: triggers séparés alarme/été/SO pour déclenchement fiable. Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
   domain: automation
   author: LaCaseHome
 
@@ -137,15 +137,23 @@ trigger:
     for:
       minutes: !input delay_close_min
 
-  # Saison / Alarme / Solaire (OPTIONNELS) via TEMPLATE pour gérer les valeurs vides
-  - id: optional_entities_change
+  # Alarme (trigger si configurée)
+  - id: alarm_change
     platform: template
     value_template: >-
-      {{ [
-        states(summer_entity_id) if summer_entity_id else none,
-        states(alarm_id) if alarm_id else none,
-        states(solar_id) if solar_id else none
-      ] | reject('none') | join(',') }}
+      {{ alarm_id != '' and states(alarm_id) }}
+
+  # Été (trigger si configuré)
+  - id: summer_change
+    platform: template
+    value_template: >-
+      {{ summer_entity_id != '' and states(summer_entity_id) }}
+
+  # Solar Optimizer (trigger si configuré)
+  - id: solar_change
+    platform: template
+    value_template: >-
+      {{ solar_id != '' and states(solar_id) }}
 
   # Tick (optimisé)
   - id: periodic
