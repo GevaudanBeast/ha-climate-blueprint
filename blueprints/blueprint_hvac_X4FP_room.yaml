@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP (Thermique + SO compatible) v7.3"
-  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix: trigger SO conditionnel si configuré. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique."
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.4"
+  description: "X4FP avec Solar Optimizer prioritaire. Surveille switch.solar_optimizer_xxx (ON = SO chauffe). Fix v7.4: triggers séparés alarme/été/SO pour déclenchement fiable. ORDRE: Été > Fenêtre > SO ACTIF > Away > Thermique."
   domain: automation
   author: LaCaseHome
 
@@ -145,15 +145,23 @@ trigger:
     to: "off"
     for: { minutes: !input delay_close_min }
 
-  # Été / Away / Solar switch (OPTIONNELS) via TEMPLATE pour gérer les valeurs vides
-  - id: optional_entities_change
+  # Alarme (trigger si configurée)
+  - id: alarm_change
     platform: template
     value_template: >-
-      {{ [
-        states(summer_id) if summer_id else none,
-        states(alarm_id) if alarm_id else none,
-        states(solar_switch_id) if solar_switch_id else none
-      ] | reject('none') | join(',') }}
+      {{ alarm_id != '' and states(alarm_id) }}
+
+  # Été (trigger si configuré)
+  - id: summer_change
+    platform: template
+    value_template: >-
+      {{ summer_id != '' and states(summer_id) }}
+
+  # Solar Optimizer switch (trigger si configuré)
+  - id: solar_change
+    platform: template
+    value_template: >-
+      {{ solar_switch_id != '' and states(solar_switch_id) }}
 
   # Tick périodique (optimisé)
   - id: periodic
