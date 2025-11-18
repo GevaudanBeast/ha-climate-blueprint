@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.5"
-  description: "Fix v2.5: solar_active vérifie attribut is_active (au lieu de state). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
+  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.6"
+  description: "Fix v2.6: trigger solar_change surveille is_active (réactivité immédiate). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
   domain: automation
   author: LaCaseHome
 
@@ -154,7 +154,12 @@ trigger:
   - id: solar_change
     platform: template
     value_template: >-
-      {{ solar_id != '' and states(solar_id) }}
+      {% if solar_id != '' %}
+        {% set active_attr = state_attr(solar_id, 'is_active') %}
+        {{ (active_attr == true) if (active_attr != None) else is_state(solar_id, 'on') }}
+      {% else %}
+        false
+      {% endif %}
 
   # Tick (optimisé)
   - id: periodic
