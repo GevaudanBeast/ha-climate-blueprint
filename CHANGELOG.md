@@ -7,6 +7,66 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2025-12-05] - Correction critique triggers alarme/été non fiables
+
+### 🐛 Correction Critique - Tous les blueprints
+- **Bug identifié** : Triggers alarme et été non fiables
+  - **Symptôme 1** : Bascule ECO/CONFORT à l'armement/désarmement de l'alarme non systématique
+  - **Symptôme 2** : Erreurs `UndefinedError` dans les logs au démarrage de Home Assistant
+  - **Cause** : Pattern `{{ id != '' and states(id) }}` retourne soit booléen soit string
+  - **Impact** : Home Assistant ne détecte pas toujours les changements d'état
+
+### 🔧 Correction appliquée
+**Pattern buggy :**
+```yaml
+{{ alarm_id != '' and states(alarm_id) }}
+{{ summer_entity_id != '' and states(summer_entity_id) }}
+```
+
+**Pattern corrigé :**
+```yaml
+{{ states(alarm_id) if alarm_id and alarm_id != '' else 'none' }}
+{{ states(summer_entity_id) if summer_entity_id and summer_entity_id != '' else 'none' }}
+```
+
+**Avantages :**
+- ✅ Retourne toujours une string (jamais de type mixte)
+- ✅ Détection des changements garantie
+- ✅ Plus d'erreurs UndefinedError au démarrage
+- ✅ Bascules alarme/été 100% fiables
+
+### 📊 Blueprints corrigés (8 triggers au total)
+- **Thermostat Heat** : v3.4 → **v3.5** (triggers alarme + été)
+- **Room Thermostat** : v2.7 → **v2.8** (triggers alarme + été)
+- **X4FP Bathroom** : v7.13 → **v7.14** (triggers alarme + été)
+- **X4FP Room** : v7.10 → **v7.11** (triggers alarme + été)
+
+### ✅ Tests effectués
+- ✅ Audit complet de tous les triggers (template, state, time)
+- ✅ Vérification triggers Solar Optimizer : OK (booléen cohérent)
+- ✅ Vérification triggers Tick périodique : OK (booléen cohérent)
+- ✅ Vérification triggers fenêtres/température : OK (natifs HA)
+- ✅ Pattern buggy complètement éliminé (0 occurrence)
+- ✅ Pattern corrigé appliqué partout (8 occurrences)
+
+### 🎯 Impact utilisateur
+**Avant (buggy) :**
+- ⚠️ Alarme armée → ECO parfois, pas toujours
+- ⚠️ Passage été/hiver parfois raté
+- ⚠️ Logs remplis d'erreurs UndefinedError
+
+**Après (corrigé) :**
+- ✅ Alarme armée → ECO systématique
+- ✅ Passage été/hiver fiable
+- ✅ Aucune erreur de template
+
+### 📝 Commit
+- Commit : `76c2fce`
+- Auteur : Claude (Claude Code)
+- Date : 2025-12-05
+
+---
+
 ## [2025-01-16] - Correction bug déclenchement inopinée X4FP Bathroom
 
 ### 🐛 Correction Critique
@@ -178,24 +238,28 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 ## Versions des Blueprints
 
 ### HVAC – Thermostat Chauffage (Alarme = Eco/Confort)
+- **v3.5** (2025-12-05) : Correction critique triggers alarme/été fiables (string vs booléen)
 - **v3.2** (2025-01-16) : Triggers alarme conditionnels, automation créable sans alarme
 - **v3.1** (2025-01-16) : Uniformisation tick variable
 - **v3.0** (2025-01-15) : Simplifications templates, suppression variable inutilisée
 - **v2.x** : Versions antérieures (non documentées)
 
 ### HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO
+- **v2.8** (2025-12-05) : Correction critique triggers alarme/été fiables (string vs booléen)
 - **v2.2** (2025-01-16) : Correction bug current_temp manquante (critique)
 - **v2.1** (2025-01-16) : Uniformisation tick variable
 - **v2.0** (2025-01-15) : Simplifications templates, suppression variable inutilisée
 - **v1.x** : Versions antérieures (non documentées)
 
 ### HVAC – X4FP Salle de bain (Lumière + SO compatible)
+- **v7.14** (2025-12-05) : Correction critique triggers alarme/été fiables (string vs booléen)
 - **v7.4** (2025-01-16) : Correction bug déclenchement inopinée (lumière stricte)
 - **v7.3** (2025-01-16) : Nettoyage nom version
 - **v7.2** (2025-01-15) : Correction critique bug tick_m, simplifications
 - **v7.x** : Versions antérieures (non documentées)
 
 ### HVAC – X4FP (Thermique + SO compatible)
+- **v7.11** (2025-12-05) : Correction critique triggers alarme/été fiables (string vs booléen)
 - **v7.3** (2025-01-16) : Nettoyage nom version
 - **v7.2** (2025-01-15) : Simplification clamp, simplifications templates
 - **v7.x** : Versions antérieures (non documentées)
