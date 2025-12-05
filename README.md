@@ -19,7 +19,7 @@ Ce repository contient des blueprints d'automatisation Home Assistant pour gére
 
 ## Blueprints disponibles
 
-### 1. Thermostat Chauffage Simple (v3.0)
+### 1. Thermostat Chauffage Simple (v3.5)
 **Fichier:** `blueprint_hvac_thermostat_heat.yaml`
 
 Blueprint pour thermostat de chauffage avec gestion alarme Eco/Confort.
@@ -41,7 +41,7 @@ Blueprint pour thermostat de chauffage avec gestion alarme Eco/Confort.
 
 ---
 
-### 2. Thermostat/Climatisation Pièce (v2.0)
+### 2. Thermostat/Climatisation Pièce (v2.8)
 **Fichier:** `blueprint_hvac_room_thermostat.yaml`
 
 Blueprint universel pour pièce avec thermostat ou climatisation réversible.
@@ -63,7 +63,7 @@ Blueprint universel pour pièce avec thermostat ou climatisation réversible.
 
 ---
 
-### 3. X4FP Salle de Bain avec Lumière (v7.2)
+### 3. X4FP Salle de Bain avec Lumière (v7.14)
 **Fichier:** `blueprint_hvac_X4FP_bathroom.yaml`
 
 Blueprint pour sèche-serviettes fil pilote avec détection de présence via lumière.
@@ -86,7 +86,7 @@ Blueprint pour sèche-serviettes fil pilote avec détection de présence via lum
 
 ---
 
-### 4. X4FP Pièce avec Contrôle Thermique (v7.2)
+### 4. X4FP Pièce avec Contrôle Thermique (v7.11)
 **Fichier:** `blueprint_hvac_X4FP_room.yaml`
 
 Blueprint pour radiateur fil pilote avec contrôle thermique par hystérésis.
@@ -200,6 +200,13 @@ MIT License - Voir [LICENSE](LICENSE)
 ---
 
 ## Changelog
+
+### v3.5 / v2.8 / v7.14 / v7.11 (2025-12-05) - CORRECTION CRITIQUE
+- **Fix majeur** : Triggers alarme/été fiables (retour string vs booléen)
+- Corrige bascules ECO/CONFORT non systématiques
+- Élimine erreurs UndefinedError dans les logs
+- Détection changements d'état garantie à 100%
+- **Tous les blueprints corrigés** (8 triggers)
 
 ### v7.2 (X4FP Bathroom & Room)
 - Fix trigger Solar Optimizer conditionnel
