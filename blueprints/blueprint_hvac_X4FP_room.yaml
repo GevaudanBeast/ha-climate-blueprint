@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP (Thermique + SO compatible) v7.10"
-  description: "X4FP avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.10: SO actif UNIQUEMENT de JOUR (évite boucle circulaire la nuit). ORDRE: Été > Fenêtre > SO ACTIF (si jour + autorisé en Away) > Away > Thermique (si non Away + capteur valide)."
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.11"
+  description: "X4FP avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.11: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF (si jour + autorisé en Away) > Away > Thermique (si non Away + capteur valide)."
   domain: automation
   author: LaCaseHome
 
@@ -159,13 +159,13 @@ trigger:
   - id: alarm_change
     platform: template
     value_template: >-
-      {{ alarm_id != '' and states(alarm_id) }}
+      {{ states(alarm_id) if alarm_id and alarm_id != '' else 'none' }}
 
   # Été (trigger si configuré)
   - id: summer_change
     platform: template
     value_template: >-
-      {{ summer_id != '' and states(summer_id) }}
+      {{ states(summer_id) if summer_id and summer_id != '' else 'none' }}
 
   # Solar Optimizer switch (trigger si configuré)
   - id: solar_change

@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.7"
-  description: "Fix v2.7: SO actif UNIQUEMENT de JOUR (évite boucle circulaire la nuit). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
+  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.8"
+  description: "Fix v2.8: triggers alarme/été fiables (retour string vs booléen). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
   domain: automation
   author: LaCaseHome
 
@@ -142,13 +142,13 @@ trigger:
   - id: alarm_change
     platform: template
     value_template: >-
-      {{ alarm_id != '' and states(alarm_id) }}
+      {{ states(alarm_id) if alarm_id and alarm_id != '' else 'none' }}
 
   # Été (trigger si configuré)
   - id: summer_change
     platform: template
     value_template: >-
-      {{ summer_entity_id != '' and states(summer_entity_id) }}
+      {{ states(summer_entity_id) if summer_entity_id and summer_entity_id != '' else 'none' }}
 
   # Solar Optimizer (trigger si configuré)
   - id: solar_change
