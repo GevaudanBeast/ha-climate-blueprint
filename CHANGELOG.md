@@ -7,24 +7,28 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
-## [2025-12-18] - Correction détection alarme/été sensible à la casse
+## [2025-12-18] - Correction COMPLÈTE détections sensibles à la casse
 
-### 🐛 Correction Critique - 3 Blueprints corrigés
-- **Bugs identifiés** : Détections sensibles à la casse pour alarme et été
+### 🐛 Correction Critique - TOUS les Blueprints corrigés
+- **Bugs identifiés** : Détections sensibles à la casse pour alarme, été, Solar Optimizer et lumière
   - **Thermostat Heat v3.6** : Détection `is_away` manquait le `.lower()`
-  - **X4FP Bathroom v7.15** : Détection `is_summer` utilisait `is_state()` sensible à la casse
-  - **X4FP Room v7.12** : Détection `is_summer` utilisait `is_state()` sensible à la casse
+  - **Room Thermostat v2.9** : Détection Solar Optimizer utilisait `is_state()` sensible à la casse
+  - **X4FP Bathroom v7.16** : Détections `is_summer`, Solar Optimizer ET lumière utilisaient `is_state()` sensible à la casse
+  - **X4FP Room v7.13** : Détections `is_summer` ET Solar Optimizer utilisaient `is_state()` sensible à la casse
 
 - **Symptômes** :
-  - Chauffages ne changent pas de mode quand l'alarme est mise
-  - Bascule été/hiver ne se déclenche pas si l'état retourne avec majuscule
-  - Bascule ECO/CONFORT non systématique
+  - Chauffages/clims ne changent pas de mode quand l'alarme est mise
+  - Bascule été/hiver ne se déclenche pas
+  - Solar Optimizer ne déclenche pas le chauffage
+  - Lumière ne déclenche pas le mode confort (X4FP Bathroom)
+  - Tous ces problèmes apparaissent **seulement** si Home Assistant retourne les états avec majuscules
 
 - **Cause** : Détections sans `.lower()` échouent si l'état retourne avec des majuscules
   - Exemple : `'Armed_away'` vs `'armed_away'`
   - Exemple : `'On'` vs `'on'`
+  - Fonction `is_state()` est sensible à la casse
 
-- **Impact** : Comportement imprévisible selon la configuration Home Assistant
+- **Impact** : Comportement imprévisible selon la configuration Home Assistant et la langue système
 
 ### 🔧 Corrections appliquées
 
@@ -54,7 +58,7 @@ is_away: >-
 is_summer: "{{ summer_id != '' and is_state(summer_id, 'on') }}"
 ```
 
-**Pattern corrigé (v7.15/v7.12) :**
+**Pattern corrigé (v7.16/v7.13) :**
 ```yaml
 is_summer: >-
   {% if summer_id and summer_id != '' %}
@@ -65,17 +69,42 @@ is_summer: >-
   {% endif %}
 ```
 
+#### 3. Room Thermostat & X4FP - Détection Solar Optimizer
+
+**Pattern incomplet (v2.8/v7.15/v7.12) :**
+```yaml
+{{ (active_attr == true) if (active_attr != None) else is_state(solar_id, 'on') }}
+```
+
+**Pattern corrigé (v2.9/v7.16/v7.13) :**
+```yaml
+{{ (active_attr == true) if (active_attr != None) else (states(solar_id) | lower == 'on') }}
+```
+
+#### 4. X4FP Bathroom - Détection lumière
+
+**Pattern incomplet (v7.15) :**
+```yaml
+is_light_on: "{{ is_state(light_id, 'on') }}"
+```
+
+**Pattern corrigé (v7.16) :**
+```yaml
+is_light_on: "{{ states(light_id) | lower == 'on' }}"
+```
+
 **Avantages :**
 - ✅ Normalisation avec `.lower()` pour gérer toutes les variantes de casse
 - ✅ Vérification explicite des IDs vides
 - ✅ Pattern cohérent dans **TOUS** les blueprints
 - ✅ Support de multiples valeurs d'état (on, true, open)
-- ✅ Détection 100% fiable
+- ✅ Détection 100% fiable pour **TOUTES** les fonctionnalités
 
 ### 📊 Blueprints corrigés
 - **Thermostat Heat** : v3.5 → **v3.6** (détection is_away)
-- **X4FP Bathroom** : v7.14 → **v7.15** (détection is_summer)
-- **X4FP Room** : v7.11 → **v7.12** (détection is_summer)
+- **Room Thermostat** : v2.8 → **v2.9** (détection Solar Optimizer)
+- **X4FP Bathroom** : v7.14 → v7.15 → **v7.16** (détection is_summer, Solar Optimizer, lumière)
+- **X4FP Room** : v7.11 → v7.12 → **v7.13** (détection is_summer, Solar Optimizer)
 
 ### ✅ Tests effectués
 - ✅ Audit de tous les patterns de détection d'état
@@ -87,13 +116,17 @@ is_summer: >-
 **Avant (buggy) :**
 - ⚠️ Alarme armée → pas de changement de mode si état avec majuscule
 - ⚠️ Mode été → pas de changement si l'état retourne 'On' au lieu de 'on'
+- ⚠️ Solar Optimizer → pas de chauffage si switch retourne 'ON' au lieu de 'on'
+- ⚠️ Lumière (X4FP Bathroom) → pas de passage confort si état 'On'
 - ⚠️ Comportement imprévisible selon la configuration Home Assistant
 
 **Après (corrigé) :**
-- ✅ Alarme armée → ECO systématique (toutes variantes de casse)
-- ✅ Alarme désarmée → CONFORT systématique
+- ✅ Alarme armée/désarmée → bascules ECO/CONFORT systématiques
 - ✅ Mode été → détection fiable quelle que soit la casse
-- ✅ Comportement prévisible et fiable pour tous les blueprints
+- ✅ Solar Optimizer → activation fiable du chauffage
+- ✅ Lumière → détection fiable de l'état
+- ✅ **Comportement 100% prévisible et fiable pour TOUS les blueprints**
+- ✅ **Toutes les détections d'état utilisent `.lower()` de manière cohérente**
 
 ---
 

@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.8"
-  description: "Fix v2.8: triggers alarme/été fiables (retour string vs booléen). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
+  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.9"
+  description: "Fix v2.9: détection Solar Optimizer robuste (ajout .lower()). Fix v2.8: triggers alarme/été fiables (retour string vs booléen). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
   domain: automation
   author: LaCaseHome
 
@@ -156,7 +156,7 @@ trigger:
     value_template: >-
       {% if solar_id != '' %}
         {% set active_attr = state_attr(solar_id, 'is_active') %}
-        {{ (active_attr == true) if (active_attr != None) else is_state(solar_id, 'on') }}
+        {{ (active_attr == true) if (active_attr != None) else (states(solar_id) | lower == 'on') }}
       {% else %}
         false
       {% endif %}
@@ -190,7 +190,7 @@ action:
       solar_active: >-
         {% if solar_id != '' %}
           {% set active_attr = state_attr(solar_id, 'is_active') %}
-          {{ (active_attr == true) if (active_attr != None) else is_state(solar_id, 'on') }}
+          {{ (active_attr == true) if (active_attr != None) else (states(solar_id) | lower == 'on') }}
         {% else %}
           false
         {% endif %}
