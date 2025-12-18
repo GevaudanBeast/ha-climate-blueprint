@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.14"
-  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.14: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF (si lumière OFF + pas trigger light_off + autorisé en Away) > Away > Lumière (si non Away)."
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.15"
+  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.15: détection été robuste (ajout .lower()). Fix v7.14: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF (si lumière OFF + pas trigger light_off + autorisé en Away) > Away > Lumière (si non Away)."
   domain: automation
   author: LaCaseHome
 
@@ -218,7 +218,13 @@ variables:
 
   tick_minutes: !input tick_minutes
 
-  is_summer: "{{ summer_id != '' and is_state(summer_id, 'on') }}"
+  is_summer: >-
+    {% if summer_id and summer_id != '' %}
+      {% set st = states(summer_id) | lower %}
+      {{ st in ['on','true','open'] }}
+    {% else %}
+      false
+    {% endif %}
   is_away: >-
     {% if alarm_id and alarm_id != '' %}
       {% set st = states(alarm_id) | lower %}

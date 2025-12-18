@@ -19,7 +19,7 @@ Ce repository contient des blueprints d'automatisation Home Assistant pour gére
 
 ## Blueprints disponibles
 
-### 1. Thermostat Chauffage Simple (v3.5)
+### 1. Thermostat Chauffage Simple (v3.6)
 **Fichier:** `blueprint_hvac_thermostat_heat.yaml`
 
 Blueprint pour thermostat de chauffage avec gestion alarme Eco/Confort.
@@ -63,7 +63,7 @@ Blueprint universel pour pièce avec thermostat ou climatisation réversible.
 
 ---
 
-### 3. X4FP Salle de Bain avec Lumière (v7.14)
+### 3. X4FP Salle de Bain avec Lumière (v7.15)
 **Fichier:** `blueprint_hvac_X4FP_bathroom.yaml`
 
 Blueprint pour sèche-serviettes fil pilote avec détection de présence via lumière.
@@ -86,7 +86,7 @@ Blueprint pour sèche-serviettes fil pilote avec détection de présence via lum
 
 ---
 
-### 4. X4FP Pièce avec Contrôle Thermique (v7.11)
+### 4. X4FP Pièce avec Contrôle Thermique (v7.12)
 **Fichier:** `blueprint_hvac_X4FP_room.yaml`
 
 Blueprint pour radiateur fil pilote avec contrôle thermique par hystérésis.
@@ -200,6 +200,12 @@ MIT License - Voir [LICENSE](LICENSE)
 ---
 
 ## Changelog
+
+### v7.15 / v7.12 (X4FP) + v3.6 (Thermostat Heat) (2025-12-18) - CORRECTION CRITIQUE
+- **Fix détection été** (X4FP Bathroom v7.15, X4FP Room v7.12) : Ajout `.lower()` pour robustesse détection is_summer
+- **Fix détection alarme** (Thermostat Heat v3.6) : Ajout `.lower()` pour robustesse détection is_away
+- Corrige bascules mode été et ECO/CONFORT non déclenchées selon casse état
+- Pattern cohérent avec `.lower()` dans tous les blueprints
 
 ### v3.5 / v2.8 / v7.14 / v7.11 (2025-12-05) - CORRECTION CRITIQUE
 - **Fix majeur** : Triggers alarme/été fiables (retour string vs booléen)

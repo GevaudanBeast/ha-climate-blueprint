@@ -7,6 +7,96 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2025-12-18] - Correction détection alarme/été sensible à la casse
+
+### 🐛 Correction Critique - 3 Blueprints corrigés
+- **Bugs identifiés** : Détections sensibles à la casse pour alarme et été
+  - **Thermostat Heat v3.6** : Détection `is_away` manquait le `.lower()`
+  - **X4FP Bathroom v7.15** : Détection `is_summer` utilisait `is_state()` sensible à la casse
+  - **X4FP Room v7.12** : Détection `is_summer` utilisait `is_state()` sensible à la casse
+
+- **Symptômes** :
+  - Chauffages ne changent pas de mode quand l'alarme est mise
+  - Bascule été/hiver ne se déclenche pas si l'état retourne avec majuscule
+  - Bascule ECO/CONFORT non systématique
+
+- **Cause** : Détections sans `.lower()` échouent si l'état retourne avec des majuscules
+  - Exemple : `'Armed_away'` vs `'armed_away'`
+  - Exemple : `'On'` vs `'on'`
+
+- **Impact** : Comportement imprévisible selon la configuration Home Assistant
+
+### 🔧 Corrections appliquées
+
+#### 1. Thermostat Heat - Détection alarme
+
+**Pattern incomplet (v3.5) :**
+```yaml
+is_away: >-
+  {{ alarm_id and states(alarm_id).startswith('armed') }}
+```
+
+**Pattern corrigé (v3.6) :**
+```yaml
+is_away: >-
+  {% if alarm_id and alarm_id != '' %}
+    {% set st = states(alarm_id) | lower %}
+    {{ st.startswith('armed') }}
+  {% else %}
+    false
+  {% endif %}
+```
+
+#### 2. X4FP Bathroom & Room - Détection été
+
+**Pattern incomplet (v7.14/v7.11) :**
+```yaml
+is_summer: "{{ summer_id != '' and is_state(summer_id, 'on') }}"
+```
+
+**Pattern corrigé (v7.15/v7.12) :**
+```yaml
+is_summer: >-
+  {% if summer_id and summer_id != '' %}
+    {% set st = states(summer_id) | lower %}
+    {{ st in ['on','true','open'] }}
+  {% else %}
+    false
+  {% endif %}
+```
+
+**Avantages :**
+- ✅ Normalisation avec `.lower()` pour gérer toutes les variantes de casse
+- ✅ Vérification explicite des IDs vides
+- ✅ Pattern cohérent dans **TOUS** les blueprints
+- ✅ Support de multiples valeurs d'état (on, true, open)
+- ✅ Détection 100% fiable
+
+### 📊 Blueprints corrigés
+- **Thermostat Heat** : v3.5 → **v3.6** (détection is_away)
+- **X4FP Bathroom** : v7.14 → **v7.15** (détection is_summer)
+- **X4FP Room** : v7.11 → **v7.12** (détection is_summer)
+
+### ✅ Tests effectués
+- ✅ Audit de tous les patterns de détection d'état
+- ✅ Comparaison entre tous les blueprints pour cohérence
+- ✅ Tous les blueprints utilisent maintenant `.lower()` de manière cohérente
+- ✅ Syntaxe YAML validée pour tous les blueprints
+
+### 🎯 Impact utilisateur
+**Avant (buggy) :**
+- ⚠️ Alarme armée → pas de changement de mode si état avec majuscule
+- ⚠️ Mode été → pas de changement si l'état retourne 'On' au lieu de 'on'
+- ⚠️ Comportement imprévisible selon la configuration Home Assistant
+
+**Après (corrigé) :**
+- ✅ Alarme armée → ECO systématique (toutes variantes de casse)
+- ✅ Alarme désarmée → CONFORT systématique
+- ✅ Mode été → détection fiable quelle que soit la casse
+- ✅ Comportement prévisible et fiable pour tous les blueprints
+
+---
+
 ## [2025-12-05] - Correction critique triggers alarme/été non fiables
 
 ### 🐛 Correction Critique - Tous les blueprints
