@@ -1,6 +1,7 @@
 blueprint:
-  name: HVAC – Thermostat Chauffage (Alarme = Eco/Confort) v3.5
+  name: HVAC – Thermostat Chauffage (Alarme = Eco/Confort) v3.6
   description: >
+    Fix v3.6: détection alarme robuste (ajout .lower() pour compatibilité casse).
     Fix v3.5: triggers alarme/été fiables (retour string vs booléen).
     Chauffage automatique selon l'état de l'alarme :
     - ✅ Alarme armée → preset choisi (par défaut ECO) - RESPECTÉ
@@ -177,8 +178,12 @@ action:
            states(summer_entity_id) | lower in ['on','true','open'] }}
       win_any_open: "{{ expand(window_sensors_list) | selectattr('state','eq','on') | list | count > 0 }}"
       is_away: >-
-        {{ alarm_id and
-           states(alarm_id).startswith('armed') }}
+        {% if alarm_id and alarm_id != '' %}
+          {% set st = states(alarm_id) | lower %}
+          {{ st.startswith('armed') }}
+        {% else %}
+          false
+        {% endif %}
       target_preset: "{{ preset_armed if is_away else preset_disarmed }}"
       presets: "{{ state_attr(climate,'preset_modes') or [] }}"
       has_target: "{{ target_preset in presets }}"

@@ -7,6 +7,58 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2025-12-18] - Correction détection alarme (Thermostat Heat v3.6)
+
+### 🐛 Correction Critique - Thermostat Heat
+- **Bug identifié** : Chauffages ne changent pas de mode quand l'alarme est mise
+  - **Symptôme** : Bascule ECO/CONFORT ne se déclenche pas lors de l'armement/désarmement
+  - **Cause** : Détection `is_away` manquait le `.lower()` sur l'état de l'alarme
+  - **Impact** : Si l'état de l'alarme retourne `Armed_away` (avec majuscule), le test `.startswith('armed')` échoue
+
+### 🔧 Correction appliquée
+**Pattern incomplet (v3.5) :**
+```yaml
+is_away: >-
+  {{ alarm_id and states(alarm_id).startswith('armed') }}
+```
+
+**Pattern corrigé (v3.6) :**
+```yaml
+is_away: >-
+  {% if alarm_id and alarm_id != '' %}
+    {% set st = states(alarm_id) | lower %}
+    {{ st.startswith('armed') }}
+  {% else %}
+    false
+  {% endif %}
+```
+
+**Avantages :**
+- ✅ Vérification explicite `alarm_id != ''`
+- ✅ Normalisation avec `.lower()` pour gérer toutes les variantes de casse
+- ✅ Pattern cohérent avec les autres blueprints (X4FP Room, X4FP Bathroom, Room Thermostat)
+- ✅ Détection alarme 100% fiable
+
+### 📊 Blueprint corrigé
+- **Thermostat Heat** : v3.5 → **v3.6** (détection is_away)
+
+### ✅ Tests effectués
+- ✅ Comparaison avec les autres blueprints pour cohérence
+- ✅ Tous les blueprints utilisent maintenant le même pattern robuste
+- ✅ Syntaxe YAML validée
+
+### 🎯 Impact utilisateur
+**Avant (v3.5 - buggy) :**
+- ⚠️ Alarme armée → pas de changement de mode si état avec majuscule
+- ⚠️ Comportement imprévisible selon la configuration Home Assistant
+
+**Après (v3.6 - corrigé) :**
+- ✅ Alarme armée → ECO systématique (toutes variantes de casse)
+- ✅ Alarme désarmée → CONFORT systématique
+- ✅ Comportement fiable et prévisible
+
+---
+
 ## [2025-12-05] - Correction critique triggers alarme/été non fiables
 
 ### 🐛 Correction Critique - Tous les blueprints

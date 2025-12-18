@@ -19,7 +19,7 @@ Ce repository contient des blueprints d'automatisation Home Assistant pour gére
 
 ## Blueprints disponibles
 
-### 1. Thermostat Chauffage Simple (v3.5)
+### 1. Thermostat Chauffage Simple (v3.6)
 **Fichier:** `blueprint_hvac_thermostat_heat.yaml`
 
 Blueprint pour thermostat de chauffage avec gestion alarme Eco/Confort.
@@ -200,6 +200,11 @@ MIT License - Voir [LICENSE](LICENSE)
 ---
 
 ## Changelog
+
+### v3.6 (Thermostat Heat) (2025-12-18) - CORRECTION CRITIQUE
+- **Fix détection alarme** : Ajout `.lower()` pour robustesse détection is_away
+- Corrige bascules ECO/CONFORT non déclenchées selon casse état alarme
+- Pattern cohérent avec les autres blueprints
 
 ### v3.5 / v2.8 / v7.14 / v7.11 (2025-12-05) - CORRECTION CRITIQUE
 - **Fix majeur** : Triggers alarme/été fiables (retour string vs booléen)
