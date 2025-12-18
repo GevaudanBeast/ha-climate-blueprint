@@ -41,7 +41,7 @@ Blueprint pour thermostat de chauffage avec gestion alarme Eco/Confort.
 
 ---
 
-### 2. Thermostat/Climatisation Pièce (v2.8)
+### 2. Thermostat/Climatisation Pièce (v2.9)
 **Fichier:** `blueprint_hvac_room_thermostat.yaml`
 
 Blueprint universel pour pièce avec thermostat ou climatisation réversible.
@@ -63,7 +63,7 @@ Blueprint universel pour pièce avec thermostat ou climatisation réversible.
 
 ---
 
-### 3. X4FP Salle de Bain avec Lumière (v7.15)
+### 3. X4FP Salle de Bain avec Lumière (v7.16)
 **Fichier:** `blueprint_hvac_X4FP_bathroom.yaml`
 
 Blueprint pour sèche-serviettes fil pilote avec détection de présence via lumière.
@@ -86,7 +86,7 @@ Blueprint pour sèche-serviettes fil pilote avec détection de présence via lum
 
 ---
 
-### 4. X4FP Pièce avec Contrôle Thermique (v7.12)
+### 4. X4FP Pièce avec Contrôle Thermique (v7.13)
 **Fichier:** `blueprint_hvac_X4FP_room.yaml`
 
 Blueprint pour radiateur fil pilote avec contrôle thermique par hystérésis.
@@ -201,11 +201,14 @@ MIT License - Voir [LICENSE](LICENSE)
 
 ## Changelog
 
-### v7.15 / v7.12 (X4FP) + v3.6 (Thermostat Heat) (2025-12-18) - CORRECTION CRITIQUE
-- **Fix détection été** (X4FP Bathroom v7.15, X4FP Room v7.12) : Ajout `.lower()` pour robustesse détection is_summer
-- **Fix détection alarme** (Thermostat Heat v3.6) : Ajout `.lower()` pour robustesse détection is_away
-- Corrige bascules mode été et ECO/CONFORT non déclenchées selon casse état
-- Pattern cohérent avec `.lower()` dans tous les blueprints
+### v7.16 / v7.13 / v2.9 / v3.6 (2025-12-18) - CORRECTION CRITIQUE COMPLÈTE
+- **Fix détection complète** : Ajout `.lower()` pour toutes les détections d'état
+- **Thermostat Heat v3.6** : Détection alarme robuste
+- **Room Thermostat v2.9** : Détection Solar Optimizer robuste
+- **X4FP Bathroom v7.16** : Détection été, alarme, Solar Optimizer ET lumière robustes
+- **X4FP Room v7.13** : Détection été, alarme ET Solar Optimizer robustes
+- **Résultat** : Tous les blueprints utilisent `.lower()` de manière cohérente
+- Corrige bascules mode non déclenchées selon casse état (alarme, été, SO, lumière)
 
 ### v3.5 / v2.8 / v7.14 / v7.11 (2025-12-05) - CORRECTION CRITIQUE
 - **Fix majeur** : Triggers alarme/été fiables (retour string vs booléen)

@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.15"
-  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.15: détection été robuste (ajout .lower()). Fix v7.14: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF (si lumière OFF + pas trigger light_off + autorisé en Away) > Away > Lumière (si non Away)."
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.16"
+  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.16: détection lumière et Solar Optimizer robustes (ajout .lower()). Fix v7.15: détection été robuste (ajout .lower()). Fix v7.14: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF (si lumière OFF + pas trigger light_off + autorisé en Away) > Away > Lumière (si non Away)."
   domain: automation
   author: LaCaseHome
 
@@ -173,7 +173,7 @@ trigger:
     value_template: >-
       {% if solar_switch_id != '' %}
         {% set active_attr = state_attr(solar_switch_id, 'is_active') %}
-        {{ (active_attr == true) if (active_attr != None) else is_state(solar_switch_id, 'on') }}
+        {{ (active_attr == true) if (active_attr != None) else (states(solar_switch_id) | lower == 'on') }}
       {% else %}
         false
       {% endif %}
@@ -235,7 +235,7 @@ variables:
   solar_is_heating: >-
     {% if solar_switch_id != '' %}
       {% set active_attr = state_attr(solar_switch_id, 'is_active') %}
-      {{ (active_attr == true) if (active_attr != None) else is_state(solar_switch_id, 'on') }}
+      {{ (active_attr == true) if (active_attr != None) else (states(solar_switch_id) | lower == 'on') }}
     {% else %}
       false
     {% endif %}
@@ -250,7 +250,7 @@ action:
 
   # 0) Variables runtime
   - variables:
-      is_light_on: "{{ is_state(light_id, 'on') }}"
+      is_light_on: "{{ states(light_id) | lower == 'on' }}"
       current_preset: "{{ state_attr(climate,'preset_mode') or '' }}"
       current_mode: "{{ states(climate) }}"
 
