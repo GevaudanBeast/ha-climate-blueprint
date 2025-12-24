@@ -1,0 +1,341 @@
+# Scripts de Test pour les Blueprints HVAC
+# À copier dans votre fichier scripts.yaml ou à importer via l'interface Home Assistant
+#
+# Prérequis : Créer les entités de test (voir TESTS.md)
+
+# ================================
+# TESTS ALARME
+# ================================
+
+test_alarm_lowercase:
+  alias: "🧪 Test Alarme - lowercase (armed_away)"
+  sequence:
+    - service: alarm_control_panel.alarm_arm_away
+      target:
+        entity_id: alarm_control_panel.test_alarm
+    - delay:
+        seconds: 2
+    - service: logbook.log
+      data:
+        name: "Test Alarme"
+        message: "✅ État alarme : armed_away (lowercase)"
+        entity_id: alarm_control_panel.test_alarm
+
+test_alarm_disarmed:
+  alias: "🧪 Test Alarme - Désarmée (disarmed)"
+  sequence:
+    - service: alarm_control_panel.alarm_disarm
+      target:
+        entity_id: alarm_control_panel.test_alarm
+    - delay:
+        seconds: 2
+    - service: logbook.log
+      data:
+        name: "Test Alarme"
+        message: "✅ État alarme : disarmed"
+        entity_id: alarm_control_panel.test_alarm
+
+test_alarm_armed_home:
+  alias: "🧪 Test Alarme - Armed Home"
+  sequence:
+    - service: alarm_control_panel.alarm_arm_home
+      target:
+        entity_id: alarm_control_panel.test_alarm
+    - delay:
+        seconds: 2
+    - service: logbook.log
+      data:
+        name: "Test Alarme"
+        message: "✅ État alarme : armed_home"
+        entity_id: alarm_control_panel.test_alarm
+
+# ================================
+# TESTS ÉTÉ
+# ================================
+
+test_summer_on:
+  alias: "🧪 Test Été - ON"
+  sequence:
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.test_summer
+    - delay:
+        seconds: 2
+    - service: logbook.log
+      data:
+        name: "Test Été"
+        message: "✅ Mode été activé : ON"
+        entity_id: input_boolean.test_summer
+
+test_summer_off:
+  alias: "🧪 Test Été - OFF"
+  sequence:
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.test_summer
+    - delay:
+        seconds: 2
+    - service: logbook.log
+      data:
+        name: "Test Été"
+        message: "✅ Mode été désactivé : OFF"
+        entity_id: input_boolean.test_summer
+
+# ================================
+# TESTS SOLAR OPTIMIZER
+# ================================
+
+test_solar_on:
+  alias: "🧪 Test Solar - ON"
+  sequence:
+    - service: switch.turn_on
+      target:
+        entity_id: switch.test_solar_optimizer
+    - delay:
+        seconds: 2
+    - service: logbook.log
+      data:
+        name: "Test Solar Optimizer"
+        message: "✅ Solar Optimizer activé : ON"
+        entity_id: switch.test_solar_optimizer
+
+test_solar_off:
+  alias: "🧪 Test Solar - OFF"
+  sequence:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.test_solar_optimizer
+    - delay:
+        seconds: 2
+    - service: logbook.log
+      data:
+        name: "Test Solar Optimizer"
+        message: "✅ Solar Optimizer désactivé : OFF"
+        entity_id: switch.test_solar_optimizer
+
+# ================================
+# TESTS LUMIÈRE (X4FP Bathroom)
+# ================================
+
+test_light_on:
+  alias: "🧪 Test Lumière - ON"
+  sequence:
+    - service: light.turn_on
+      target:
+        entity_id: light.test_bathroom
+    - delay:
+        seconds: 2
+    - service: logbook.log
+      data:
+        name: "Test Lumière"
+        message: "✅ Lumière allumée : ON"
+        entity_id: light.test_bathroom
+
+test_light_off:
+  alias: "🧪 Test Lumière - OFF"
+  sequence:
+    - service: light.turn_off
+      target:
+        entity_id: light.test_bathroom
+    - delay:
+        seconds: 2
+    - service: logbook.log
+      data:
+        name: "Test Lumière"
+        message: "✅ Lumière éteinte : OFF"
+        entity_id: light.test_bathroom
+
+# ================================
+# TESTS COMBINÉS
+# ================================
+
+test_scenario_1_thermostat_heat:
+  alias: "🎬 Scénario 1 - Thermostat Heat : Alarme Armée → ECO"
+  sequence:
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "🎬 Début Scénario 1 : Alarme Armée → Mode ECO attendu"
+    - service: alarm_control_panel.alarm_arm_away
+      target:
+        entity_id: alarm_control_panel.test_alarm
+    - delay:
+        seconds: 5
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "✅ Fin Scénario 1 - Vérifier que le thermostat est en mode ECO"
+
+test_scenario_2_thermostat_heat:
+  alias: "🎬 Scénario 2 - Thermostat Heat : Alarme Désarmée → CONFORT"
+  sequence:
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "🎬 Début Scénario 2 : Alarme Désarmée → Mode CONFORT attendu"
+    - service: alarm_control_panel.alarm_disarm
+      target:
+        entity_id: alarm_control_panel.test_alarm
+    - delay:
+        seconds: 5
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "✅ Fin Scénario 2 - Vérifier que le thermostat est en mode CONFORT"
+
+test_scenario_3_room_thermostat:
+  alias: "🎬 Scénario 3 - Room Thermostat : Été → Mode COOL"
+  sequence:
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "🎬 Début Scénario 3 : Mode été → Mode COOL attendu"
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.test_summer
+    - delay:
+        seconds: 5
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "✅ Fin Scénario 3 - Vérifier que la clim est en mode COOL"
+
+test_scenario_4_room_thermostat:
+  alias: "🎬 Scénario 4 - Room Thermostat : Hiver → Mode HEAT"
+  sequence:
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "🎬 Début Scénario 4 : Mode hiver → Mode HEAT attendu"
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.test_summer
+    - delay:
+        seconds: 5
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "✅ Fin Scénario 4 - Vérifier que le thermostat est en mode HEAT"
+
+test_scenario_5_x4fp_bathroom:
+  alias: "🎬 Scénario 5 - X4FP Bathroom : Lumière ON → CONFORT"
+  sequence:
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "🎬 Début Scénario 5 : Lumière ON → Mode CONFORT attendu"
+    - service: alarm_control_panel.alarm_disarm
+      target:
+        entity_id: alarm_control_panel.test_alarm
+    - delay:
+        seconds: 2
+    - service: light.turn_on
+      target:
+        entity_id: light.test_bathroom
+    - delay:
+        seconds: 5
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "✅ Fin Scénario 5 - Vérifier que X4FP est en mode CONFORT"
+
+test_scenario_6_x4fp_bathroom:
+  alias: "🎬 Scénario 6 - X4FP Bathroom : Lumière OFF → ECO"
+  sequence:
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "🎬 Début Scénario 6 : Lumière OFF → Mode ECO attendu"
+    - service: alarm_control_panel.alarm_disarm
+      target:
+        entity_id: alarm_control_panel.test_alarm
+    - delay:
+        seconds: 2
+    - service: light.turn_off
+      target:
+        entity_id: light.test_bathroom
+    - delay:
+        seconds: 5
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "✅ Fin Scénario 6 - Vérifier que X4FP est en mode ECO"
+
+test_scenario_7_solar_optimizer:
+  alias: "🎬 Scénario 7 - Solar Optimizer : SO ON → Chauffage activé"
+  sequence:
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "🎬 Début Scénario 7 : Solar ON → Chauffage CONFORT attendu"
+    - service: alarm_control_panel.alarm_disarm
+      target:
+        entity_id: alarm_control_panel.test_alarm
+    - delay:
+        seconds: 2
+    - service: switch.turn_on
+      target:
+        entity_id: switch.test_solar_optimizer
+    - delay:
+        seconds: 5
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "✅ Fin Scénario 7 - Vérifier que le chauffage est en CONFORT (Solar Optimizer)"
+
+test_scenario_8_priority_summer:
+  alias: "🎬 Scénario 8 - Priorité Été : Été > Solar > Alarme"
+  sequence:
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "🎬 Début Scénario 8 : Été prioritaire → Mode été attendu (malgré Solar et Alarme)"
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.test_summer
+    - delay:
+        seconds: 2
+    - service: switch.turn_on
+      target:
+        entity_id: switch.test_solar_optimizer
+    - delay:
+        seconds: 2
+    - service: alarm_control_panel.alarm_arm_away
+      target:
+        entity_id: alarm_control_panel.test_alarm
+    - delay:
+        seconds: 5
+    - service: logbook.log
+      data:
+        name: "Test Scénario"
+        message: "✅ Fin Scénario 8 - Vérifier que le mode été est appliqué (prioritaire)"
+
+# ================================
+# RESET COMPLET
+# ================================
+
+test_reset_all:
+  alias: "🔄 Reset - Tout remettre à zéro"
+  sequence:
+    - service: logbook.log
+      data:
+        name: "Test Reset"
+        message: "🔄 Reset de toutes les entités de test"
+    - service: alarm_control_panel.alarm_disarm
+      target:
+        entity_id: alarm_control_panel.test_alarm
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.test_summer
+    - service: switch.turn_off
+      target:
+        entity_id: switch.test_solar_optimizer
+    - service: light.turn_off
+      target:
+        entity_id: light.test_bathroom
+    - delay:
+        seconds: 2
+    - service: logbook.log
+      data:
+        name: "Test Reset"
+        message: "✅ Reset terminé - Tous les états sont à OFF/Disarmed"

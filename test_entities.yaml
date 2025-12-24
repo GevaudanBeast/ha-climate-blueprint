@@ -1,0 +1,142 @@
+# Entités de test pour les Blueprints HVAC
+# À ajouter dans votre configuration.yaml
+#
+# Redémarrez Home Assistant après avoir ajouté ces entités
+
+# ================================
+# INPUT BOOLEAN pour simuler les états
+# ================================
+
+input_boolean:
+  # Mode été
+  test_summer:
+    name: "🧪 Test - Été"
+    icon: mdi:weather-sunny
+    initial: off
+
+  # État Solar Optimizer (backend pour le switch)
+  test_solar_state:
+    name: "🧪 Test - Solar State (backend)"
+    icon: mdi:solar-power
+    initial: off
+
+  # État lumière (backend pour le light)
+  test_light_state:
+    name: "🧪 Test - Light State (backend)"
+    icon: mdi:lightbulb
+    initial: off
+
+# ================================
+# ALARM CONTROL PANEL pour simuler l'alarme
+# ================================
+
+# Note: Utilisez Manual Alarm Control Panel (installation via HACS recommandée)
+# Ou configurez manuellement via l'interface Home Assistant:
+# Paramètres → Appareils et services → Ajouter une intégration → Manual
+
+# Si vous utilisez la configuration YAML pour Manual:
+# alarm_control_panel:
+#   - platform: manual
+#     name: "🧪 Test Alarme"
+#     code: "1234"
+#     arming_time: 0
+#     delay_time: 0
+#     trigger_time: 0
+#     disarmed:
+#       trigger_time: 0
+#     armed_home:
+#       arming_time: 0
+#       delay_time: 0
+#     armed_away:
+#       arming_time: 0
+#       delay_time: 0
+
+# ================================
+# SWITCH pour Solar Optimizer
+# ================================
+
+switch:
+  - platform: template
+    switches:
+      test_solar_optimizer:
+        friendly_name: "🧪 Test - Solar Optimizer"
+        icon_template: mdi:solar-power
+        value_template: "{{ is_state('input_boolean.test_solar_state', 'on') }}"
+        turn_on:
+          - service: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.test_solar_state
+        turn_off:
+          - service: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.test_solar_state
+
+# ================================
+# LIGHT pour X4FP Bathroom
+# ================================
+
+light:
+  - platform: template
+    lights:
+      test_bathroom:
+        friendly_name: "🧪 Test - Lumière Salle de Bain"
+        icon_template: mdi:lightbulb
+        value_template: "{{ is_state('input_boolean.test_light_state', 'on') }}"
+        turn_on:
+          - service: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.test_light_state
+        turn_off:
+          - service: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.test_light_state
+
+# ================================
+# CLIMATE TEST (optionnel - pour observer les changements)
+# ================================
+
+# Si vous voulez un climate factice pour les tests, utilisez Generic Thermostat:
+# climate:
+#   - platform: generic_thermostat
+#     name: "🧪 Test - Thermostat"
+#     heater: switch.test_heater_dummy
+#     target_sensor: sensor.test_temperature
+#     min_temp: 15
+#     max_temp: 25
+#     ac_mode: false
+#     target_temp: 20
+#     cold_tolerance: 0.3
+#     hot_tolerance: 0.3
+#     initial_hvac_mode: "heat"
+#     precision: 0.1
+
+# Switch factice pour le heater
+# switch:
+#   - platform: template
+#     switches:
+#       test_heater_dummy:
+#         friendly_name: "🧪 Test - Heater (dummy)"
+#         value_template: "{{ is_state('input_boolean.test_heater_state', 'on') }}"
+#         turn_on:
+#           - service: input_boolean.turn_on
+#             target:
+#               entity_id: input_boolean.test_heater_state
+#         turn_off:
+#           - service: input_boolean.turn_off
+#             target:
+#               entity_id: input_boolean.test_heater_state
+
+# Input boolean pour le heater
+# input_boolean:
+#   test_heater_state:
+#     name: "🧪 Test - Heater State"
+#     initial: off
+
+# Sensor de température factice
+# sensor:
+#   - platform: template
+#     sensors:
+#       test_temperature:
+#         friendly_name: "🧪 Test - Température"
+#         unit_of_measurement: "°C"
+#         value_template: "20.0"
