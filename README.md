@@ -260,6 +260,8 @@ R: Utilisez le mode trace dans Home Assistant et consultez le logbook pour voir 
 ## Documentation complémentaire
 
 - [Guide d'installation détaillé](INSTALLATION.md)
+- **[Guide de Migration v3.6/v2.9/v7.16/v7.13](MIGRATION_GUIDE.md)** ⭐ **IMPORTANT si mise à jour**
+- [Checklist de Tests](CHECKLIST_TESTS.md)
 - [Documentation Thermostat Heat](docs/thermostat_heat.md)
 - [Documentation Room Thermostat](docs/room_thermostat.md)
 - [Documentation X4FP Bathroom](docs/x4fp_bathroom.md)
