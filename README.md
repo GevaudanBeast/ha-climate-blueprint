@@ -8,6 +8,7 @@ Ce repository contient des blueprints d'automatisation Home Assistant pour gére
 
 ## Fonctionnalités principales
 
+- ⭐ **Planning horaire** avec schedules Home Assistant (Matin/Journée/Soirée/Nuit)
 - Gestion automatique des modes Été/Hiver
 - Détection d'ouverture de fenêtres avec temporisation
 - Intégration avec les systèmes d'alarme (mode Away)
@@ -19,7 +20,7 @@ Ce repository contient des blueprints d'automatisation Home Assistant pour gére
 
 ## Blueprints disponibles
 
-### 1. Thermostat Chauffage Simple (v3.6)
+### 1. Thermostat Chauffage Simple (v3.7)
 **Fichier:** `blueprint_hvac_thermostat_heat.yaml`
 
 Blueprint pour thermostat de chauffage avec gestion alarme Eco/Confort.
@@ -30,8 +31,9 @@ Blueprint pour thermostat de chauffage avec gestion alarme Eco/Confort.
 - Chaudière avec thermostat
 
 **Fonctionnalités:**
+- ⭐ **Planning horaire** (4 périodes configurables)
 - Alarme armée → mode ECO
-- Alarme désarmée → mode CONFORT
+- Alarme désarmée → planning OU mode CONFORT
 - Gestion fenêtres (pause chauffage)
 - Mode été (arrêt automatique)
 - Fallback température pour tous les presets
@@ -41,7 +43,7 @@ Blueprint pour thermostat de chauffage avec gestion alarme Eco/Confort.
 
 ---
 
-### 2. Thermostat/Climatisation Pièce (v2.9)
+### 2. Thermostat/Climatisation Pièce (v2.10)
 **Fichier:** `blueprint_hvac_room_thermostat.yaml`
 
 Blueprint universel pour pièce avec thermostat ou climatisation réversible.
@@ -52,6 +54,7 @@ Blueprint universel pour pièce avec thermostat ou climatisation réversible.
 - Radiateurs avec thermostat programmable
 
 **Fonctionnalités:**
+- ⭐ **Planning horaire** (4 périodes configurables)
 - Bascule automatique Été (cool) / Hiver (heat)
 - Gestion Away avec presets (away/home/none)
 - Support Solar Optimizer (prioritaire sur Away)
@@ -63,7 +66,7 @@ Blueprint universel pour pièce avec thermostat ou climatisation réversible.
 
 ---
 
-### 3. X4FP Salle de Bain avec Lumière (v7.16)
+### 3. X4FP Salle de Bain avec Lumière (v7.17)
 **Fichier:** `blueprint_hvac_X4FP_bathroom.yaml`
 
 Blueprint pour sèche-serviettes fil pilote avec détection de présence via lumière.
@@ -74,11 +77,12 @@ Blueprint pour sèche-serviettes fil pilote avec détection de présence via lum
 - Intégration Solar Optimizer
 
 **Fonctionnalités:**
+- ⭐ **Planning horaire** (prioritaire sur lumière si alarme désarmée)
 - Lumière ON → mode CONFORT
 - Lumière OFF → mode ECO
 - Mode toggle (bascule eco ↔ comfort)
 - Solar Optimizer prioritaire
-- Ordre de priorité: Été > Fenêtre > SO actif > Away > Lumière
+- Ordre de priorité: Été > Fenêtre > SO actif > Away > Planning > Lumière
 - Autorisation SO en mode Away (optionnel)
 - Tick périodique
 
@@ -86,7 +90,7 @@ Blueprint pour sèche-serviettes fil pilote avec détection de présence via lum
 
 ---
 
-### 4. X4FP Pièce avec Contrôle Thermique (v7.13)
+### 4. X4FP Pièce avec Contrôle Thermique (v7.14)
 **Fichier:** `blueprint_hvac_X4FP_room.yaml`
 
 Blueprint pour radiateur fil pilote avec contrôle thermique par hystérésis.
@@ -97,11 +101,12 @@ Blueprint pour radiateur fil pilote avec contrôle thermique par hystérésis.
 - Optimisation autoconsommation solaire
 
 **Fonctionnalités:**
+- ⭐ **Planning horaire** (prioritaire sur thermique si alarme désarmée)
 - Contrôle thermique avec hystérésis réglable
 - Consigne via input_number
 - Garde-fous température min/max
 - Solar Optimizer prioritaire
-- Ordre de priorité: Été > Fenêtre > SO actif > Away > Thermique
+- Ordre de priorité: Été > Fenêtre > SO actif > Away > Planning > Thermique
 - Autorisation SO en mode Away (optionnel)
 - Tick périodique
 
@@ -260,6 +265,9 @@ R: Utilisez le mode trace dans Home Assistant et consultez le logbook pour voir 
 ## Documentation complémentaire
 
 - [Guide d'installation détaillé](INSTALLATION.md)
+- **[Guide de Migration v3.6/v2.9/v7.16/v7.13](MIGRATION_GUIDE.md)** ⭐ **IMPORTANT si mise à jour**
+- **[Guide du Planning Horaire](GUIDE_PLANNING.md)** 📅 **NOUVEAU - Configuration schedules**
+- [Checklist de Tests](CHECKLIST_TESTS.md)
 - [Documentation Thermostat Heat](docs/thermostat_heat.md)
 - [Documentation Room Thermostat](docs/room_thermostat.md)
 - [Documentation X4FP Bathroom](docs/x4fp_bathroom.md)

@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.16"
-  description: "Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.16: détection lumière et Solar Optimizer robustes (ajout .lower()). Fix v7.15: détection été robuste (ajout .lower()). Fix v7.14: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF (si lumière OFF + pas trigger light_off + autorisé en Away) > Away > Lumière (si non Away)."
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.17"
+  description: "NEW v7.17: planning horaire avec schedules HA (remplace gestion lumière si alarme désarmée). Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.16: détection lumière et Solar Optimizer robustes (ajout .lower()). Fix v7.15: détection été robuste (ajout .lower()). Fix v7.14: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF > Away > Planning (si désarmé) > Lumière (si désarmé + pas de planning)."
   domain: automation
   author: LaCaseHome
 
@@ -75,6 +75,51 @@ blueprint:
       name: Alarme (Alarmo) – Away si armed_*
       default: ""
       selector: { entity: { domain: alarm_control_panel } }
+
+    # -------- Planning horaire (OPTIONNEL - remplace lumière si alarme désarmée) --------
+    schedule_morning:
+      name: "📅 Planning Matin (optionnel)"
+      description: "Schedule HA actif le matin. Remplace gestion lumière si alarme désarmée."
+      default: ""
+      selector: { entity: { domain: schedule } }
+
+    morning_preset:
+      name: "Preset Matin"
+      default: comfort
+      selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
+
+    schedule_day:
+      name: "📅 Planning Journée (optionnel)"
+      description: "Schedule HA actif en journée. Remplace gestion lumière si alarme désarmée."
+      default: ""
+      selector: { entity: { domain: schedule } }
+
+    day_preset:
+      name: "Preset Journée"
+      default: eco
+      selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
+
+    schedule_evening:
+      name: "📅 Planning Soirée (optionnel)"
+      description: "Schedule HA actif en soirée. Remplace gestion lumière si alarme désarmée."
+      default: ""
+      selector: { entity: { domain: schedule } }
+
+    evening_preset:
+      name: "Preset Soirée"
+      default: comfort
+      selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
+
+    schedule_night:
+      name: "📅 Planning Nuit (optionnel)"
+      description: "Schedule HA actif la nuit. Remplace gestion lumière si alarme désarmée."
+      default: ""
+      selector: { entity: { domain: schedule } }
+
+    night_preset:
+      name: "Preset Nuit"
+      default: eco
+      selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
 
     # -------- SOLAIRE (OPTIONNEL) --------
     solar_switch:
@@ -161,6 +206,17 @@ trigger:
     value_template: >-
       {{ states(alarm_id) if alarm_id and alarm_id != '' else 'none' }}
 
+  # Planning horaire (triggers si configurés)
+  - id: schedule_change
+    platform: template
+    value_template: >-
+      {% set schedules = [sched_morning, sched_day, sched_evening, sched_night] %}
+      {% set active_states = [] %}
+      {% for s in schedules if s and s != '' %}
+        {% set _ = active_states.append(states(s)) %}
+      {% endfor %}
+      {{ active_states | join(',') if active_states else 'none' }}
+
   # Été (trigger si configuré)
   - id: summer_change
     platform: template
@@ -217,6 +273,16 @@ variables:
   preset_away: !input preset_away
 
   tick_minutes: !input tick_minutes
+
+  # Planning horaire
+  sched_morning: !input schedule_morning
+  sched_day: !input schedule_day
+  sched_evening: !input schedule_evening
+  sched_night: !input schedule_night
+  preset_morning: !input morning_preset
+  preset_day: !input day_preset
+  preset_evening: !input evening_preset
+  preset_night: !input night_preset
 
   is_summer: >-
     {% if summer_id and summer_id != '' %}
@@ -345,7 +411,36 @@ action:
                   message: "🔒 Away → {{ preset_away|upper }}"
           - stop: "Away appliqué"
 
-  # 5) LUMIÈRE – gestion continue (applique selon l'état actuel) - SEULEMENT si non Away
+  # 5) PLANNING HORAIRE – si alarme désarmée ET schedule actif (prioritaire sur lumière)
+  - choose:
+      - conditions: "{{ not is_away }}"
+        sequence:
+          - variables:
+              schedule_preset: >-
+                {% if sched_morning and sched_morning != '' and is_state(sched_morning, 'on') %}
+                  {{ preset_morning }}
+                {% elif sched_day and sched_day != '' and is_state(sched_day, 'on') %}
+                  {{ preset_day }}
+                {% elif sched_evening and sched_evening != '' and is_state(sched_evening, 'on') %}
+                  {{ preset_evening }}
+                {% elif sched_night and sched_night != '' and is_state(sched_night, 'on') %}
+                  {{ preset_night }}
+                {% else %}
+                  none
+                {% endif %}
+          - choose:
+              - conditions: "{{ schedule_preset != 'none' and current_preset != schedule_preset }}"
+                sequence:
+                  - service: climate.set_preset_mode
+                    target: { entity_id: "{{ climate }}" }
+                    data: { preset_mode: "{{ schedule_preset }}" }
+                  - service: logbook.log
+                    data:
+                      name: "{{ room }}"
+                      message: "📅 Planning → {{ schedule_preset|upper }}"
+                  - stop: "Planning appliqué"
+
+  # 6) LUMIÈRE – gestion continue (applique selon l'état actuel) - SEULEMENT si non Away ET pas de planning
   - choose:
       # ============ ON behaviors ============
       - conditions: "{{ not is_away and is_light_on and light_on_behavior == 'force_comfort' and current_preset != preset_heat }}"
