@@ -7,7 +7,7 @@ blueprint:
     Chauffage automatique selon l'état de l'alarme :
     - ✅ Alarme armée → preset choisi (par défaut ECO) - RESPECTÉ
     - ✅ Alarme désarmée → planning horaire OU preset par défaut
-    - ✅ Planning horaire avec schedules Home Assistant (matin/jour/soirée/nuit)
+    - ✅ Planning horaire avec 1 schedule Home Assistant (ON=confort, OFF=eco)
     - ✅ Triggers d'alarme/été FIABLES (template avec vérification)
     - ✅ Fallback température COMPLET pour tous les presets
     - ✅ Fenêtres, Été, Tick optimisé + logs conditionnels
@@ -77,61 +77,25 @@ blueprint:
           options: [eco, comfort, comfort-1, comfort-2, frost_protection, boost, none]
 
     # Planning horaire (optionnel - actif uniquement si alarme désarmée)
-    schedule_morning:
-      name: "📅 Planning Matin (optionnel)"
-      description: "Schedule Home Assistant actif le matin (ex: 06h-08h). Actif uniquement si alarme désarmée."
+    schedule_entity:
+      name: "📅 Planning Horaire (optionnel)"
+      description: "Schedule Home Assistant. Définissez vos périodes (ex: ON 06h-08h et 17h-22h, OFF le reste). Actif uniquement si alarme désarmée."
       default: ""
       selector:
         entity:
           domain: schedule
 
-    morning_preset:
-      name: "Preset Matin"
+    preset_schedule_on:
+      name: "Preset quand Planning ACTIF (ON)"
+      description: "Preset à appliquer quand le schedule est ON"
       default: comfort
       selector:
         select:
           options: [eco, comfort, comfort-1, comfort-2, frost_protection, boost, none]
 
-    schedule_day:
-      name: "📅 Planning Journée (optionnel)"
-      description: "Schedule Home Assistant actif en journée (ex: 08h-17h). Actif uniquement si alarme désarmée."
-      default: ""
-      selector:
-        entity:
-          domain: schedule
-
-    day_preset:
-      name: "Preset Journée"
-      default: eco
-      selector:
-        select:
-          options: [eco, comfort, comfort-1, comfort-2, frost_protection, boost, none]
-
-    schedule_evening:
-      name: "📅 Planning Soirée (optionnel)"
-      description: "Schedule Home Assistant actif en soirée (ex: 17h-22h). Actif uniquement si alarme désarmée."
-      default: ""
-      selector:
-        entity:
-          domain: schedule
-
-    evening_preset:
-      name: "Preset Soirée"
-      default: comfort
-      selector:
-        select:
-          options: [eco, comfort, comfort-1, comfort-2, frost_protection, boost, none]
-
-    schedule_night:
-      name: "📅 Planning Nuit (optionnel)"
-      description: "Schedule Home Assistant actif la nuit (ex: 22h-06h). Actif uniquement si alarme désarmée."
-      default: ""
-      selector:
-        entity:
-          domain: schedule
-
-    night_preset:
-      name: "Preset Nuit"
+    preset_schedule_off:
+      name: "Preset quand Planning INACTIF (OFF)"
+      description: "Preset à appliquer quand le schedule est OFF"
       default: eco
       selector:
         select:
@@ -192,14 +156,9 @@ variables:
   preset_armed: !input preset_when_armed
   preset_disarmed: !input preset_when_disarmed
   # Planning horaire
-  sched_morning: !input schedule_morning
-  sched_day: !input schedule_day
-  sched_evening: !input schedule_evening
-  sched_night: !input schedule_night
-  preset_morning: !input morning_preset
-  preset_day: !input day_preset
-  preset_evening: !input evening_preset
-  preset_night: !input night_preset
+  schedule_id: !input schedule_entity
+  preset_sched_on: !input preset_schedule_on
+  preset_sched_off: !input preset_schedule_off
 
 trigger:
   # Fenêtres
@@ -227,16 +186,11 @@ trigger:
     value_template: >-
       {{ states(alarm_id) if alarm_id and alarm_id != '' else 'none' }}
 
-  # Planning horaire (triggers si configurés)
+  # Planning horaire (trigger si configuré)
   - id: schedule_change
     platform: template
     value_template: >-
-      {% set schedules = [sched_morning, sched_day, sched_evening, sched_night] %}
-      {% set active_states = [] %}
-      {% for s in schedules if s and s != '' %}
-        {% set _ = active_states.append(states(s)) %}
-      {% endfor %}
-      {{ active_states | join(',') if active_states else 'none' }}
+      {{ states(schedule_id) if schedule_id and schedule_id != '' else 'none' }}
 
   # Tick optimisé
   - id: periodic
@@ -268,17 +222,12 @@ action:
           false
         {% endif %}
       schedule_preset: >-
-        {% if not is_away %}
-          {% if sched_morning and sched_morning != '' and is_state(sched_morning, 'on') %}
-            {{ preset_morning }}
-          {% elif sched_day and sched_day != '' and is_state(sched_day, 'on') %}
-            {{ preset_day }}
-          {% elif sched_evening and sched_evening != '' and is_state(sched_evening, 'on') %}
-            {{ preset_evening }}
-          {% elif sched_night and sched_night != '' and is_state(sched_night, 'on') %}
-            {{ preset_night }}
+        {% if not is_away and schedule_id and schedule_id != '' %}
+          {% set sched_state = states(schedule_id) | lower %}
+          {% if sched_state == 'on' %}
+            {{ preset_sched_on }}
           {% else %}
-            none
+            {{ preset_sched_off }}
           {% endif %}
         {% else %}
           none
