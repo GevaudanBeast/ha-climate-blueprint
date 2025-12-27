@@ -1,11 +1,18 @@
 # Checklist de Tests - Blueprints HVAC
 
-## 🎯 Blueprint: Thermostat Heat v3.6
+## 🎯 Blueprint: Thermostat Heat v3.7
 
 ### Tests Alarme
 - [ ] Armer l'alarme (`armed_away`) → Le thermostat passe en mode ECO
 - [ ] Armer l'alarme (`armed_home`) → Le thermostat passe en mode ECO
-- [ ] Désarmer l'alarme (`disarmed`) → Le thermostat passe en mode CONFORT
+- [ ] Désarmer l'alarme (`disarmed`) → Le thermostat passe en mode CONFORT (ou planning si actif)
+
+### Tests Planning Horaire ⭐ NEW
+- [ ] Créer `schedule.test_matin` actif maintenant → Mode CONFORT (si configuré)
+- [ ] Désactiver le schedule → Revenir à preset désarmé (CONFORT)
+- [ ] Activer schedule + armer alarme → Planning ignoré, mode ECO (alarme prioritaire)
+- [ ] Vérifier trace : `trigger.id = schedule_change` quand schedule change
+- [ ] Vérifier logbook : message `📅 Planning → PRESET`
 
 ### Tests Été
 - [ ] Activer mode été → Le thermostat passe en OFF
@@ -16,16 +23,24 @@
 - [ ] Fermer la fenêtre → Le thermostat revient en HEAT (après délai)
 
 ### Tests Priorités
-- [ ] Été actif + Alarme armée → Mode été prioritaire (OFF)
-- [ ] Fenêtre ouverte + Alarme armée → Fenêtre prioritaire (OFF)
+- [ ] Été actif + Planning → Été prioritaire (OFF)
+- [ ] Fenêtre ouverte + Planning → Fenêtre prioritaire (OFF)
+- [ ] Alarme armée + Planning → Alarme prioritaire (ignore planning)
 
 ---
 
-## 🎯 Blueprint: Room Thermostat v2.9
+## 🎯 Blueprint: Room Thermostat v2.10
 
 ### Tests Alarme
 - [ ] Armer l'alarme → Preset AWAY activé (ou OFF si pas de preset away)
-- [ ] Désarmer l'alarme → Preset HOME activé (ou NONE si pas de preset home)
+- [ ] Désarmer l'alarme → Preset HOME activé (ou planning si actif)
+
+### Tests Planning Horaire ⭐ NEW
+- [ ] Créer schedule actif → Preset du planning appliqué
+- [ ] Désactiver schedule → Revenir à preset HOME
+- [ ] Planning + armer alarme → Planning ignoré, AWAY activé
+- [ ] Vérifier trace : `schedule_preset` calculé correctement
+- [ ] Vérifier logbook : message `📅 Planning → PRESET`
 
 ### Tests Été/Hiver
 - [ ] Mode été ON → Mode COOL + température été
@@ -42,22 +57,28 @@
 - [ ] Fenêtre fermée → Reprendre le mode (HEAT ou COOL)
 
 ### Tests Priorités
-- [ ] Fenêtre ouverte + Solar ON → Fenêtre prioritaire (OFF)
-- [ ] Solar ON + Alarme armée → Solar prioritaire (SO pilote)
-- [ ] Été + Solar + Alarme → Été prioritaire (mode selon saison)
+- [ ] Fenêtre > Solar > Alarme > Planning > Défaut
+- [ ] Vérifier chaque niveau de priorité
 
 ---
 
-## 🎯 Blueprint: X4FP Bathroom v7.16
+## 🎯 Blueprint: X4FP Bathroom v7.17
 
 ### Tests Lumière
-- [ ] Allumer la lumière (alarme désarmée) → Mode CONFORT
-- [ ] Éteindre la lumière (alarme désarmée) → Mode ECO
+- [ ] Allumer la lumière (alarme désarmée, pas de planning) → Mode CONFORT
+- [ ] Éteindre la lumière (alarme désarmée, pas de planning) → Mode ECO
+
+### Tests Planning Horaire ⭐ NEW
+- [ ] Schedule actif + lumière OFF → Planning prioritaire (ignore lumière)
+- [ ] Schedule actif + lumière ON → Planning prioritaire (ignore lumière)
+- [ ] Pas de schedule + lumière ON → Gestion lumière normale (CONFORT)
+- [ ] Planning + armer alarme → Planning ignoré, AWAY activé
+- [ ] Vérifier logbook : `📅 Planning → PRESET` (pas message lumière)
 
 ### Tests Alarme
 - [ ] Armer l'alarme → Mode AWAY
-- [ ] Désarmer l'alarme + lumière OFF → Mode ECO
-- [ ] Désarmer l'alarme + lumière ON → Mode CONFORT
+- [ ] Désarmer l'alarme + lumière OFF → Mode ECO (ou planning si actif)
+- [ ] Désarmer l'alarme + lumière ON → Mode CONFORT (ou planning si actif)
 
 ### Tests Été
 - [ ] Été + politique OFF → Mode OFF
@@ -67,23 +88,30 @@
 ### Tests Solar Optimizer
 - [ ] Solar ON + lumière OFF (de jour) → Mode CONFORT (Solar prioritaire)
 - [ ] Solar ON + lumière ON → Solar prioritaire (CONFORT)
-- [ ] Solar OFF → Reprendre contrôle lumière
+- [ ] Solar OFF → Reprendre contrôle (planning ou lumière)
 
 ### Tests Fenêtre
 - [ ] Fenêtre ouverte → Mode AWAY (pause)
 - [ ] Fenêtre fermée → Reprendre contrôle
 
 ### Tests Priorités
-- [ ] Été > Fenêtre > Solar > Away > Lumière
+- [ ] Été > Fenêtre > Solar > Away > Planning > Lumière
 - [ ] Vérifier chaque niveau de priorité
 
 ---
 
-## 🎯 Blueprint: X4FP Room v7.13
+## 🎯 Blueprint: X4FP Room v7.14
 
 ### Tests Alarme
 - [ ] Armer l'alarme → Mode AWAY
-- [ ] Désarmer l'alarme → Contrôle thermique (si capteur configuré)
+- [ ] Désarmer l'alarme → Contrôle thermique ou planning (si configuré)
+
+### Tests Planning Horaire ⭐ NEW
+- [ ] Schedule actif + température basse → Planning prioritaire (ignore thermique)
+- [ ] Schedule actif + température haute → Planning prioritaire (ignore thermique)
+- [ ] Pas de schedule actif → Contrôle thermique normal
+- [ ] Planning + armer alarme → Planning ignoré, AWAY activé
+- [ ] Vérifier logbook : `📅 Planning → PRESET` (pas message thermique)
 
 ### Tests Été
 - [ ] Été + politique OFF → Mode OFF
@@ -95,7 +123,7 @@
 - [ ] Solar ON + Alarme armée + autorisation SO en Away → Solar prioritaire
 - [ ] Solar ON + Alarme armée SANS autorisation → Alarme prioritaire (AWAY)
 
-### Tests Thermique (si capteur configuré)
+### Tests Thermique (si capteur configuré et pas de planning actif)
 - [ ] Température < consigne - hystérésis → Mode HEAT (comfort)
 - [ ] Température > consigne + hystérésis → Mode IDLE (eco)
 - [ ] Température dans la bande → Maintenir état actuel
@@ -105,7 +133,7 @@
 - [ ] Fenêtre fermée → Reprendre contrôle
 
 ### Tests Priorités
-- [ ] Été > Fenêtre > Solar > Away > Thermique
+- [ ] Été > Fenêtre > Solar > Away > Planning > Thermique
 - [ ] Vérifier chaque niveau de priorité
 
 ---
