@@ -2,7 +2,11 @@
 
 ## 📅 Vue d'ensemble
 
-Le planning horaire vous permet de définir des **presets différents selon l'heure de la journée**, en utilisant les entités `schedule` de Home Assistant.
+Le planning horaire vous permet de définir **deux presets différents selon les périodes définies dans un planning**, en utilisant une entité `schedule` de Home Assistant.
+
+**Principe** :
+- ✅ **Planning ON** (pendant vos périodes définies) → Preset Confort
+- ⏸️ **Planning OFF** (hors de vos périodes) → Preset Éco
 
 **Disponible dans tous les blueprints** :
 - ✅ Thermostat Heat v3.7
@@ -28,12 +32,30 @@ Le planning horaire est **actif uniquement si l'alarme est désarmée** (présen
 ┌─────────────────────────────────────────────┐
 │ Alarme DÉSARMÉE (présent)                   │
 │ ✅ Planning actif si configuré              │
-│ 📅 Matin 06h-08h → Comfort                  │
-│ 📅 Journée 08h-17h → Eco                    │
-│ 📅 Soirée 17h-22h → Comfort                 │
-│ 📅 Nuit 22h-06h → Eco                       │
+│ 📅 Schedule ON → Preset Confort             │
+│ 📅 Schedule OFF → Preset Éco                │
 └─────────────────────────────────────────────┘
 ```
+
+### Un Seul Schedule, Plusieurs Périodes
+
+Vous créez **UN SEUL** schedule dans Home Assistant qui contient **toutes vos périodes de confort**.
+
+**Exemple** : Schedule `Chauffage Confort`
+```
+Lundi-Vendredi:
+  06:00-08:00  ← ON (confort matin)
+  17:00-22:00  ← ON (confort soirée)
+
+Samedi-Dimanche:
+  08:00-22:00  ← ON (confort journée complète)
+
+Le reste du temps → OFF (éco)
+```
+
+Le blueprint vérifie simplement :
+- **Schedule ON** → Applique `preset_schedule_on` (ex: comfort)
+- **Schedule OFF** → Applique `preset_schedule_off` (ex: eco)
 
 ### Ordre de Priorité
 
@@ -49,29 +71,47 @@ Le planning horaire est **actif uniquement si l'alarme est désarmée** (présen
 
 ## 📋 Configuration Étape par Étape
 
-### Étape 1 : Créer les Schedules dans Home Assistant
+### Étape 1 : Créer le Schedule dans Home Assistant
 
 1. Allez dans **Paramètres** → **Automatisations & Scènes** → **Helpers**
 2. Cliquez sur **+ Créer un Helper**
 3. Sélectionnez **Schedule**
 4. Configurez votre planning :
 
-**Exemple : Planning Matin**
-- **Nom** : `Chauffage Matin`
-- **ID entité** : `schedule.chauffage_matin`
+**Exemple : Planning Semaine de Travail**
+- **Nom** : `Chauffage Confort`
+- **ID entité** : `schedule.chauffage_confort`
 - **Configuration** :
-  - ✅ Lundi : 06:00 - 08:00
-  - ✅ Mardi : 06:00 - 08:00
-  - ✅ Mercredi : 06:00 - 08:00
-  - ✅ Jeudi : 06:00 - 08:00
-  - ✅ Vendredi : 06:00 - 08:00
-  - ⬜ Samedi
-  - ⬜ Dimanche
 
-**Répétez** pour les autres périodes :
-- `schedule.chauffage_journee` : Lun-Ven 08:00-17:00
-- `schedule.chauffage_soiree` : Tous les jours 17:00-22:00
-- `schedule.chauffage_nuit` : Tous les jours 22:00-06:00
+**Lundi** :
+- ✅ 06:00 - 08:00 (matin)
+- ✅ 17:00 - 22:00 (soirée)
+
+**Mardi** :
+- ✅ 06:00 - 08:00
+- ✅ 17:00 - 22:00
+
+**Mercredi** :
+- ✅ 06:00 - 08:00
+- ✅ 17:00 - 22:00
+
+**Jeudi** :
+- ✅ 06:00 - 08:00
+- ✅ 17:00 - 22:00
+
+**Vendredi** :
+- ✅ 06:00 - 08:00
+- ✅ 17:00 - 22:00
+
+**Samedi** :
+- ✅ 08:00 - 22:00 (toute la journée)
+
+**Dimanche** :
+- ✅ 08:00 - 22:00 (toute la journée)
+
+**Résultat** :
+- Le schedule sera **ON** pendant : 06h-08h et 17h-22h en semaine, 08h-22h le weekend
+- Le schedule sera **OFF** le reste du temps (22h-06h en semaine, 22h-08h le weekend)
 
 ### Étape 2 : Configurer l'Automatisation
 
@@ -81,21 +121,14 @@ Le planning horaire est **actif uniquement si l'alarme est désarmée** (présen
 4. Configurez :
 
 ```yaml
-📅 Planning Matin (optionnel):
-  - Entité : schedule.chauffage_matin
-  - Preset Matin : comfort
+📅 Planning Horaire (optionnel):
+  - Entité : schedule.chauffage_confort
 
-📅 Planning Journée (optionnel):
-  - Entité : schedule.chauffage_journee
-  - Preset Journée : eco
+Preset quand Planning ACTIF (ON):
+  - comfort
 
-📅 Planning Soirée (optionnel):
-  - Entité : schedule.chauffage_soiree
-  - Preset Soirée : comfort
-
-📅 Planning Nuit (optionnel):
-  - Entité : schedule.chauffage_nuit
-  - Preset Nuit : eco
+Preset quand Planning INACTIF (OFF):
+  - eco
 ```
 
 5. **Sauvegardez** l'automatisation
@@ -103,12 +136,12 @@ Le planning horaire est **actif uniquement si l'alarme est désarmée** (présen
 ### Étape 3 : Tester
 
 1. Activez le **mode Trace** sur l'automatisation
-2. Activez/désactivez un schedule manuellement
+2. Activez/désactivez le schedule manuellement
 3. Vérifiez dans **Traces** :
    - ✅ Trigger ID = `schedule_change`
    - ✅ Variable `schedule_preset` = preset attendu
    - ✅ Action `set_preset_mode` = preset appliqué
-4. Consultez le **Logbook** : message `📅 Planning → PRESET`
+4. Consultez le **Logbook** : message `📅 Planning → COMFORT` ou `📅 Planning → ECO`
 
 ---
 
@@ -118,101 +151,97 @@ Le planning horaire est **actif uniquement si l'alarme est désarmée** (présen
 
 **Contexte** : Maison vide en journée du lundi au vendredi.
 
-**Schedules** :
+**Schedule** :
 ```yaml
-schedule.chauffage_matin:
-  Lun-Ven: 06:00-08:00
-
-schedule.chauffage_journee:
-  Lun-Ven: 08:00-17:00
-
-schedule.chauffage_soiree:
-  Tous les jours: 17:00-22:00
-
-schedule.chauffage_nuit:
-  Tous les jours: 22:00-06:00
+schedule.chauffage_confort:
+  Lundi-Vendredi:
+    - 06:00-08:00  # Matin avant travail
+    - 17:00-22:00  # Soirée après travail
+  Samedi-Dimanche:
+    - 08:00-22:00  # Toute la journée
 ```
 
 **Configuration Blueprint** :
 ```yaml
-morning_preset: comfort    # Réveil confortable
-day_preset: eco           # Économie pendant travail
-evening_preset: comfort   # Retour à la maison
-night_preset: eco         # Nuit économique
+schedule_entity: schedule.chauffage_confort
+preset_schedule_on: comfort   # Confort pendant les périodes ON
+preset_schedule_off: eco      # Éco le reste du temps
 ```
 
 **Résultat** :
-- 06:00 → COMFORT (réveil)
-- 08:00 → ECO (départ travail)
-- 17:00 → COMFORT (retour maison)
-- 22:00 → ECO (sommeil)
+- **Lundi 06:00** → Schedule ON → COMFORT (réveil)
+- **Lundi 08:00** → Schedule OFF → ECO (départ travail)
+- **Lundi 17:00** → Schedule ON → COMFORT (retour maison)
+- **Lundi 22:00** → Schedule OFF → ECO (sommeil)
+- **Samedi 08:00** → Schedule ON → COMFORT
+- **Samedi 22:00** → Schedule OFF → ECO
 
 ---
 
-### Exemple 2 : Weekend Différent
+### Exemple 2 : Télétravail Certains Jours
 
-**Contexte** : Grasse matinée le weekend.
+**Contexte** : Télétravail mercredi et vendredi.
 
-**Schedules** :
+**Schedule** :
 ```yaml
-schedule.chauffage_matin_semaine:
-  Lun-Ven: 06:00-08:00
-
-schedule.chauffage_matin_weekend:
-  Sam-Dim: 08:00-10:00
-
-schedule.chauffage_journee:
-  Sam-Dim: 10:00-22:00  # Journée entière
-  Lun-Ven: 17:00-22:00  # Seulement soirée
+schedule.chauffage_confort:
+  Lundi-Mardi-Jeudi:
+    - 06:00-08:00
+    - 17:00-22:00
+  Mercredi-Vendredi:  # Jours de télétravail
+    - 06:00-22:00  # Confort toute la journée
+  Samedi-Dimanche:
+    - 08:00-22:00
 ```
 
 **Configuration Blueprint** :
 ```yaml
-morning_preset: comfort
-day_preset: comfort      # Confort toute la journée weekend
-evening_preset: comfort
-night_preset: eco
+schedule_entity: schedule.chauffage_confort
+preset_schedule_on: comfort
+preset_schedule_off: eco
 ```
 
 ---
 
-### Exemple 3 : Télétravail
+### Exemple 3 : Économies Nocturnes Importantes
 
-**Contexte** : Télétravail certains jours.
+**Contexte** : Réduire fortement le chauffage la nuit.
 
-**Schedules** :
+**Schedule** :
 ```yaml
-schedule.chauffage_teletravail:
-  Mercredi: 08:00-17:00
-  Vendredi: 08:00-17:00
-
-schedule.chauffage_standard:
-  Lun-Mar-Jeu: 08:00-17:00
+schedule.chauffage_confort:
+  Tous les jours:
+    - 06:00-23:00  # Journée complète
 ```
 
 **Configuration Blueprint** :
 ```yaml
-# Utiliser schedule.chauffage_teletravail pour day_preset
-day_preset: comfort  # Confort en télétravail
+schedule_entity: schedule.chauffage_confort
+preset_schedule_on: comfort
+preset_schedule_off: frost_protection  # Hors-gel la nuit (23h-06h)
 ```
 
 ---
 
-### Exemple 4 : Chauffage Économique la Nuit
+### Exemple 4 : Weekend Grasse Matinée
 
-**Contexte** : Réduire le chauffage fortement la nuit.
+**Contexte** : Se lever plus tard le weekend.
 
-**Schedules** :
+**Schedule** :
 ```yaml
-schedule.chauffage_nuit_profonde:
-  Tous les jours: 23:00-05:00
+schedule.chauffage_confort:
+  Lundi-Vendredi:
+    - 06:00-08:00
+    - 17:00-22:00
+  Samedi-Dimanche:
+    - 09:00-23:00  # Lever plus tard
 ```
 
 **Configuration Blueprint** :
 ```yaml
-night_preset: frost_protection  # Hors-gel seulement
-# OU
-night_preset: eco  # Eco standard
+schedule_entity: schedule.chauffage_confort
+preset_schedule_on: comfort
+preset_schedule_off: eco
 ```
 
 ---
@@ -232,10 +261,16 @@ night_preset: eco  # Eco standard
 
 **Exemple** :
 ```yaml
-morning_preset: comfort
-day_preset: eco
-evening_preset: comfort
-night_preset: frost_protection  # Hors-gel la nuit
+schedule_entity: schedule.chauffage_confort
+preset_schedule_on: comfort
+preset_schedule_off: eco
+```
+
+**Alternative hors-gel nocturne** :
+```yaml
+schedule_entity: schedule.chauffage_jour  # ON uniquement 06h-23h
+preset_schedule_on: comfort
+preset_schedule_off: frost_protection  # Hors-gel la nuit
 ```
 
 ---
@@ -252,10 +287,16 @@ night_preset: frost_protection  # Hors-gel la nuit
 
 **Exemple** :
 ```yaml
-morning_preset: comfort
-day_preset: eco
-evening_preset: home    # Mode home en soirée
-night_preset: eco
+schedule_entity: schedule.chauffage_confort
+preset_schedule_on: comfort
+preset_schedule_off: eco
+```
+
+**Alternative avec preset home** :
+```yaml
+schedule_entity: schedule.chauffage_confort
+preset_schedule_on: home     # Mode présence pendant périodes actives
+preset_schedule_off: eco
 ```
 
 ---
@@ -278,11 +319,12 @@ night_preset: eco
 
 **Exemple** :
 ```yaml
-morning_preset: comfort   # Chauffe le matin (ignore lumière)
-day_preset: eco          # Eco en journée (ignore lumière)
-evening_preset: comfort  # Confort soirée (ignore lumière)
-night_preset: eco        # Eco nuit (ignore lumière)
+schedule_entity: schedule.salle_de_bain_confort
+preset_schedule_on: comfort   # Chauffe selon planning (ignore lumière)
+preset_schedule_off: eco      # Éco hors planning (ignore lumière)
 ```
+
+**Usage typique** : Créer un schedule avec les périodes de douche (matin 06h-08h, soir 18h-20h) pour garantir une salle de bain chaude sans dépendre de la lumière.
 
 ---
 
@@ -304,11 +346,12 @@ night_preset: eco        # Eco nuit (ignore lumière)
 
 **Exemple** :
 ```yaml
-morning_preset: comfort   # Force comfort le matin
-day_preset: eco          # Force eco en journée
-evening_preset: comfort  # Force comfort en soirée
-night_preset: eco        # Force eco la nuit
+schedule_entity: schedule.chambre_confort
+preset_schedule_on: comfort   # Force comfort selon planning
+preset_schedule_off: eco      # Force éco hors planning
 ```
+
+**Usage typique** : Définir des périodes de confort garanti (matin, soirée) sans dépendre du contrôle thermique automatique.
 
 ---
 
@@ -316,36 +359,41 @@ night_preset: eco        # Force eco la nuit
 
 ### Checklist Post-Configuration
 
-- [ ] Schedules créés dans Home Assistant
-- [ ] Schedules configurés dans l'automatisation
-- [ ] Presets configurés pour chaque période
+- [ ] Schedule créé dans Home Assistant avec toutes les périodes
+- [ ] Schedule configuré dans l'automatisation
+- [ ] Preset ON et OFF configurés
 - [ ] Mode Trace activé
-- [ ] Test manuel : activer/désactiver un schedule
+- [ ] Test manuel : activer/désactiver le schedule
 - [ ] Vérifier trace : trigger `schedule_change`
-- [ ] Vérifier logbook : message `📅 Planning → PRESET`
+- [ ] Vérifier logbook : message `📅 Planning → COMFORT` ou `📅 Planning → ECO`
 - [ ] Test avec alarme armée : planning ignoré
 - [ ] Test avec alarme désarmée : planning actif
 - [ ] Validation sur 24h complètes
 
 ### Commandes de Test
 
-**Vérifier l'état d'un schedule** :
+**Vérifier l'état du schedule** :
 ```yaml
-État : {{ states('schedule.chauffage_matin') }}
+État : {{ states('schedule.chauffage_confort') }}
 ```
 
-**Forcer l'activation d'un schedule** :
+**Forcer l'activation du schedule** :
 ```yaml
 service: schedule.turn_on
 target:
-  entity_id: schedule.chauffage_matin
+  entity_id: schedule.chauffage_confort
 ```
 
-**Désactiver un schedule** :
+**Désactiver le schedule** :
 ```yaml
 service: schedule.turn_off
 target:
-  entity_id: schedule.chauffage_matin
+  entity_id: schedule.chauffage_confort
+```
+
+**Vérifier le preset actuel** :
+```yaml
+Preset : {{ state_attr('climate.xxx', 'preset_mode') }}
 ```
 
 ---
@@ -359,16 +407,18 @@ target:
    - Le planning est ignoré si alarme armée
 2. Vérifiez l'état du schedule :
    - Outils de développement → États → `schedule.xxx`
-   - État doit être `on` pendant la période active
+   - État doit être `on` pendant la période active, `off` en dehors
 3. Vérifiez les **Traces** :
    - Automatisation → Traces
    - Cherchez `trigger.id = schedule_change`
 4. Vérifiez la variable `schedule_preset` dans la trace
+   - Doit être égal à `preset_schedule_on` ou `preset_schedule_off`
 
 **Solutions** :
 - Rechargez les automatisations : Outils dev → YAML → Rechargement
 - Vérifiez que le schedule est bien configuré avec les bonnes heures
 - Assurez-vous que l'entité schedule est bien sélectionnée dans le blueprint
+- Testez manuellement en activant/désactivant le schedule
 
 ---
 
@@ -383,9 +433,11 @@ target:
 2. Consultez les **Logs** système :
    - Paramètres → Système → Logs
    - Cherchez erreurs `climate.set_preset_mode`
+3. Vérifiez dans la trace que le preset demandé est bien dans `preset_modes`
 
 **Solutions** :
-- Si le preset n'est pas supporté, le blueprint utilisera les **températures fallback**
+- Si le preset n'est pas supporté, le blueprint utilisera les **températures fallback** (Thermostat Heat uniquement)
+- Choisissez un preset supporté par votre thermostat
 - Vérifiez le message logbook : doit indiquer le fallback si preset absent
 
 ---
@@ -396,7 +448,7 @@ target:
 C'est impossible par design ! Le code vérifie toujours :
 ```yaml
 schedule_preset: >-
-  {% if not is_away %}  ← Vérifie alarme désarmée
+  {% if not is_away and schedule_id and schedule_id != '' %}
     ...
   {% else %}
     none
@@ -407,6 +459,24 @@ schedule_preset: >-
 1. Assurez-vous d'avoir la **bonne version** du blueprint (v3.7, v2.10, v7.17, v7.14)
 2. Rechargez les automatisations
 3. Vérifiez la trace : `is_away` doit être `false` pour que le planning soit actif
+4. Consultez le logbook : doit montrer preset alarme si alarme armée
+
+---
+
+### Problème : Le schedule change d'état mais le preset ne suit pas
+
+**Diagnostic** :
+1. Vérifiez que le trigger `schedule_change` se déclenche dans les traces
+2. Vérifiez la priorité : une condition supérieure peut être active
+   - Été actif → OFF prioritaire
+   - Fenêtre ouverte → OFF prioritaire
+   - Solar Optimizer → COMFORT prioritaire
+3. Consultez les messages logbook pour voir quelle condition est active
+
+**Solutions** :
+- Si une condition prioritaire est active, c'est normal
+- Attendez que la condition prioritaire se termine
+- Vérifiez l'ordre de priorité dans la documentation
 
 ---
 
@@ -414,25 +484,35 @@ schedule_preset: >-
 
 Voici une configuration complète pour une maison avec travail en semaine :
 
-### Schedules à créer
+### Schedule à créer
 
 ```yaml
-schedule.chauffage_matin:
-  Lundi-Vendredi: 06:00-08:00
-  Samedi-Dimanche: 08:00-10:00
+Nom: Chauffage Confort Maison
+ID: schedule.chauffage_confort
 
-schedule.chauffage_journee:
-  Lundi-Vendredi: 08:00-17:00
-  Samedi-Dimanche: 10:00-22:00
-
-schedule.chauffage_soiree:
-  Lundi-Vendredi: 17:00-22:00
-
-schedule.chauffage_nuit:
-  Tous les jours: 22:00-06:00
+Configuration:
+  Lundi:
+    - 06:00-08:00
+    - 17:00-22:00
+  Mardi:
+    - 06:00-08:00
+    - 17:00-22:00
+  Mercredi:
+    - 06:00-08:00
+    - 17:00-22:00
+  Jeudi:
+    - 06:00-08:00
+    - 17:00-22:00
+  Vendredi:
+    - 06:00-08:00
+    - 17:00-22:00
+  Samedi:
+    - 08:00-22:00
+  Dimanche:
+    - 08:00-22:00
 ```
 
-### Configuration Blueprint
+### Configuration Blueprint (Thermostat Heat v3.7)
 
 ```yaml
 name: Thermostat Salon Planning
@@ -449,18 +529,10 @@ alarm_entity: alarm_control_panel.alarme
 preset_when_armed: eco
 preset_when_disarmed: comfort
 
-# Planning horaire
-schedule_morning: schedule.chauffage_matin
-morning_preset: comfort
-
-schedule_day: schedule.chauffage_journee
-day_preset: eco
-
-schedule_evening: schedule.chauffage_soiree
-evening_preset: comfort
-
-schedule_night: schedule.chauffage_nuit
-night_preset: eco
+# ⭐ Planning horaire
+schedule_entity: schedule.chauffage_confort
+preset_schedule_on: comfort   # Pendant les périodes définies
+preset_schedule_off: eco      # En dehors des périodes
 
 # Fenêtres
 window_sensors:
@@ -478,40 +550,45 @@ tick_minutes: "10"
 
 ### Comportement Attendu
 
-| Jour | Heure | Alarme | Schedule Actif | Preset Final |
-|------|-------|--------|----------------|--------------|
-| Lundi | 06:00 | Off | matin | **comfort** |
-| Lundi | 08:00 | Off | journée | **eco** |
-| Lundi | 09:00 | **On** | journée (ignoré) | **eco** (alarme) |
-| Lundi | 17:00 | **On** | soirée (ignoré) | **eco** (alarme) |
-| Lundi | 18:00 | Off | soirée | **comfort** |
-| Lundi | 22:00 | Off | nuit | **eco** |
-| Samedi | 08:00 | Off | matin | **comfort** |
-| Samedi | 10:00 | Off | journée | **eco** |
-| Samedi | 22:00 | Off | nuit | **eco** |
+| Jour | Heure | Alarme | Schedule | Preset Final | Raison |
+|------|-------|--------|----------|--------------|--------|
+| Lundi | 06:00 | Off | **ON** | **comfort** | Planning ON |
+| Lundi | 08:00 | Off | **OFF** | **eco** | Planning OFF |
+| Lundi | 09:00 | **On** | OFF | **eco** | Alarme (ignore planning) |
+| Lundi | 17:00 | **On** | ON | **eco** | Alarme prioritaire |
+| Lundi | 18:00 | Off | **ON** | **comfort** | Planning ON |
+| Lundi | 22:00 | Off | **OFF** | **eco** | Planning OFF |
+| Samedi | 08:00 | Off | **ON** | **comfort** | Planning ON |
+| Samedi | 22:00 | Off | **OFF** | **eco** | Planning OFF |
 
 ---
 
 ## 💡 Astuces et Bonnes Pratiques
 
-### 1. Nommer Clairement les Schedules
+### 1. Nommer Clairement le Schedule
 
 ✅ **Bon** :
-- `schedule.chauffage_matin`
-- `schedule.chauffage_weekend_matin`
-- `schedule.chauffage_teletravail`
+- `schedule.chauffage_confort`
+- `schedule.chauffage_maison`
+- `schedule.periodes_presence`
 
 ❌ **Mauvais** :
 - `schedule.schedule_1`
 - `schedule.test`
 - `schedule.temp`
 
-### 2. Grouper par Logique
+### 2. Définir Toutes les Périodes dans UN Schedule
 
-Créez des schedules différents pour différentes logiques :
-- **Semaine/Weekend** : 2 schedules matin (semaine vs weekend)
-- **Télétravail** : Schedule spécifique jours télétravail
-- **Vacances** : Schedule vacances scolaires
+**Principe** : Un schedule peut contenir plusieurs plages horaires par jour.
+
+**Exemple** : Pour avoir confort matin ET soir
+```
+Lundi:
+  - 06:00-08:00  ← Première plage
+  - 17:00-22:00  ← Deuxième plage
+```
+
+Pas besoin de créer deux schedules séparés !
 
 ### 3. Utiliser les Preset Modes Existants
 
@@ -526,10 +603,10 @@ Utilisez SEULEMENT ces presets dans le blueprint !
 
 ### 4. Tester Progressivement
 
-1. Configurez **un seul** schedule d'abord (matin)
-2. Testez 24h
-3. Ajoutez les autres progressivement
-4. Validez chaque ajout
+1. Créez d'abord un schedule simple (ex: 06h-22h tous les jours)
+2. Testez 24h avec `preset_schedule_on: comfort` et `preset_schedule_off: eco`
+3. Affinez ensuite les plages horaires
+4. Validez chaque modification
 
 ### 5. Surveiller les Logs
 
@@ -538,7 +615,23 @@ Consultez régulièrement le **Logbook** :
 📅 Planning → COMFORT (06:00)
 📅 Planning → ECO (08:00)
 🔒 Alarme armée → ECO (09:00)
+📅 Planning → COMFORT (17:00)
 ```
+
+### 6. Comprendre la Différence avec le Preset par Défaut
+
+Sans planning configuré :
+```
+Alarme OFF → preset_when_disarmed (ex: comfort permanent)
+```
+
+Avec planning configuré :
+```
+Alarme OFF + Schedule ON → preset_schedule_on (ex: comfort)
+Alarme OFF + Schedule OFF → preset_schedule_off (ex: eco)
+```
+
+Le planning permet donc d'alterner automatiquement entre deux presets selon les périodes définies.
 
 ---
 

@@ -1,6 +1,6 @@
 blueprint:
   name: "HVAC – X4FP (Thermique + SO compatible) v7.14"
-  description: "NEW v7.14: planning horaire avec schedules HA (remplace contrôle thermique si alarme désarmée). X4FP avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.13: détection Solar Optimizer robuste (ajout .lower()). Fix v7.12: détection été robuste (ajout .lower()). Fix v7.11: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF > Away > Planning (si désarmé) > Thermique (si désarmé + pas de planning)."
+  description: "NEW v7.14: planning horaire avec 1 schedule HA (remplace contrôle thermique si alarme désarmée). X4FP avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.13: détection Solar Optimizer robuste (ajout .lower()). Fix v7.12: détection été robuste (ajout .lower()). Fix v7.11: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF > Away > Planning (si désarmé) > Thermique (si désarmé + pas de planning)."
   domain: automation
   author: LaCaseHome
 
@@ -78,47 +78,21 @@ blueprint:
       selector: { entity: { domain: alarm_control_panel } }
 
     # -------- Planning horaire (OPTIONNEL - remplace thermique si alarme désarmée) --------
-    schedule_morning:
-      name: "📅 Planning Matin (optionnel)"
-      description: "Schedule HA actif le matin. Remplace contrôle thermique si alarme désarmée."
+    schedule_entity:
+      name: "📅 Planning Horaire (optionnel)"
+      description: "Schedule Home Assistant. Remplace contrôle thermique si alarme désarmée."
       default: ""
       selector: { entity: { domain: schedule } }
 
-    morning_preset:
-      name: "Preset Matin"
+    preset_schedule_on:
+      name: "Preset quand Planning ACTIF (ON)"
+      description: "Preset à appliquer quand le schedule est ON"
       default: comfort
       selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
 
-    schedule_day:
-      name: "📅 Planning Journée (optionnel)"
-      description: "Schedule HA actif en journée. Remplace contrôle thermique si alarme désarmée."
-      default: ""
-      selector: { entity: { domain: schedule } }
-
-    day_preset:
-      name: "Preset Journée"
-      default: eco
-      selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
-
-    schedule_evening:
-      name: "📅 Planning Soirée (optionnel)"
-      description: "Schedule HA actif en soirée. Remplace contrôle thermique si alarme désarmée."
-      default: ""
-      selector: { entity: { domain: schedule } }
-
-    evening_preset:
-      name: "Preset Soirée"
-      default: comfort
-      selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
-
-    schedule_night:
-      name: "📅 Planning Nuit (optionnel)"
-      description: "Schedule HA actif la nuit. Remplace contrôle thermique si alarme désarmée."
-      default: ""
-      selector: { entity: { domain: schedule } }
-
-    night_preset:
-      name: "Preset Nuit"
+    preset_schedule_off:
+      name: "Preset quand Planning INACTIF (OFF)"
+      description: "Preset à appliquer quand le schedule est OFF"
       default: eco
       selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
 
@@ -206,16 +180,11 @@ trigger:
     value_template: >-
       {{ states(alarm_id) if alarm_id and alarm_id != '' else 'none' }}
 
-  # Planning horaire (triggers si configurés)
+  # Planning horaire (trigger si configuré)
   - id: schedule_change
     platform: template
     value_template: >-
-      {% set schedules = [sched_morning, sched_day, sched_evening, sched_night] %}
-      {% set active_states = [] %}
-      {% for s in schedules if s and s != '' %}
-        {% set _ = active_states.append(states(s)) %}
-      {% endfor %}
-      {{ active_states | join(',') if active_states else 'none' }}
+      {{ states(schedule_id) if schedule_id and schedule_id != '' else 'none' }}
 
   # Été (trigger si configuré)
   - id: summer_change
@@ -282,14 +251,9 @@ variables:
   tick_minutes: !input tick_minutes
 
   # Planning horaire
-  sched_morning: !input schedule_morning
-  sched_day: !input schedule_day
-  sched_evening: !input schedule_evening
-  sched_night: !input schedule_night
-  preset_morning: !input morning_preset
-  preset_day: !input day_preset
-  preset_evening: !input evening_preset
-  preset_night: !input night_preset
+  schedule_id: !input schedule_entity
+  preset_sched_on: !input preset_schedule_on
+  preset_sched_off: !input preset_schedule_off
 
   # Valeurs température (avec validation)
   temp_state: >-
@@ -459,14 +423,13 @@ action:
         sequence:
           - variables:
               schedule_preset: >-
-                {% if sched_morning and sched_morning != '' and is_state(sched_morning, 'on') %}
-                  {{ preset_morning }}
-                {% elif sched_day and sched_day != '' and is_state(sched_day, 'on') %}
-                  {{ preset_day }}
-                {% elif sched_evening and sched_evening != '' and is_state(sched_evening, 'on') %}
-                  {{ preset_evening }}
-                {% elif sched_night and sched_night != '' and is_state(sched_night, 'on') %}
-                  {{ preset_night }}
+                {% if schedule_id and schedule_id != '' %}
+                  {% set sched_state = states(schedule_id) | lower %}
+                  {% if sched_state == 'on' %}
+                    {{ preset_sched_on }}
+                  {% else %}
+                    {{ preset_sched_off }}
+                  {% endif %}
                 {% else %}
                   none
                 {% endif %}

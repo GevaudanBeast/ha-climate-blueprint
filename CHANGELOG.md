@@ -11,18 +11,19 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ### ✨ Nouvelle Fonctionnalité - Planning Horaire
 
-Tous les blueprints supportent maintenant le **planning horaire** via les entités `schedule` de Home Assistant.
+Tous les blueprints supportent maintenant le **planning horaire** via une entité `schedule` de Home Assistant.
 
 #### Nouveaux blueprints
-- **Thermostat Heat v3.7** : Planning horaire avec 4 périodes configurables
+- **Thermostat Heat v3.7** : Planning horaire avec 1 schedule et 2 presets (ON/OFF)
 - **Room Thermostat v2.10** : Planning horaire compatible avec gestion été/hiver
 - **X4FP Bathroom v7.17** : Planning horaire prioritaire sur gestion lumière
 - **X4FP Room v7.14** : Planning horaire prioritaire sur contrôle thermique
 
 #### Fonctionnalités
-- ✅ 4 périodes configurables : Matin, Journée, Soirée, Nuit
-- ✅ Utilise les entités `schedule` de Home Assistant (Helpers)
-- ✅ Chaque période a son preset associé (eco, comfort, boost, etc.)
+- ✅ **1 seul schedule** contenant toutes vos périodes de confort
+- ✅ **2 presets configurables** : preset quand schedule ON, preset quand schedule OFF
+- ✅ Utilise une entité `schedule` de Home Assistant (Helper)
+- ✅ Un schedule peut contenir plusieurs périodes (ex: matin + soir)
 - ✅ Actif **uniquement si alarme désarmée** (présence à la maison)
 - ✅ Priorité : Alarme armée > Planning > Comportement par défaut
 
@@ -32,58 +33,74 @@ Tous les blueprints supportent maintenant le **planning horaire** via les entit�
 2. Fenêtre ouverte → OFF ou preset fenêtre
 3. Solar Optimizer → COMFORT (si actif)
 4. Alarme ARMÉE → preset_when_armed (ignore le planning)
-5. ⭐ Alarme DÉSARMÉE + Planning actif → preset du planning
-6. Alarme DÉSARMÉE + Pas de planning → comportement par défaut
+5. ⭐ Alarme DÉSARMÉE + Planning ON → preset_schedule_on
+6. ⭐ Alarme DÉSARMÉE + Planning OFF → preset_schedule_off
+7. Alarme DÉSARMÉE + Pas de planning → comportement par défaut
 ```
 
 #### Configuration requise
 
-**Étape 1** : Créer des schedules dans Home Assistant
+**Étape 1** : Créer UN schedule dans Home Assistant
 - Paramètres → Automatisations & Scènes → Helpers → Créer un Helper → Schedule
-- Exemple :
-  - `schedule.chauffage_matin` : Lun-Ven 06:00-08:00
-  - `schedule.chauffage_journee` : Lun-Ven 08:00-17:00
-  - `schedule.chauffage_soiree` : Tous les jours 17:00-22:00
-  - `schedule.chauffage_nuit` : Tous les jours 22:00-06:00
+- Exemple `schedule.chauffage_confort` :
+  - Lundi-Vendredi : 06:00-08:00 et 17:00-22:00
+  - Samedi-Dimanche : 08:00-22:00
+- Le schedule sera **ON** pendant ces périodes, **OFF** le reste du temps
 
 **Étape 2** : Configurer les blueprints
 ```yaml
 # Planning horaire (optionnel)
-schedule_morning: schedule.chauffage_matin
-morning_preset: comfort
-
-schedule_day: schedule.chauffage_journee
-day_preset: eco
-
-schedule_evening: schedule.chauffage_soiree
-evening_preset: comfort
-
-schedule_night: schedule.chauffage_nuit
-night_preset: eco
+schedule_entity: schedule.chauffage_confort
+preset_schedule_on: comfort   # Preset quand schedule ON
+preset_schedule_off: eco      # Preset quand schedule OFF
 ```
 
 **Résultat** :
-- 🏠 **Présent** (alarme off) : Suit le planning horaire
-- 🚪 **Absent** (alarme on) : Force eco/away (ignore le planning)
+- 🏠 **Présent** (alarme off) + **Schedule ON** → Preset COMFORT
+- 🏠 **Présent** (alarme off) + **Schedule OFF** → Preset ECO
+- 🚪 **Absent** (alarme on) → Force eco/away (ignore le planning)
 
 #### Exemples d'utilisation
 
 **Exemple 1 : Planning semaine de travail**
-- Matin (06:00-08:00) : Comfort (réveil)
-- Journée (08:00-17:00) : Eco (travail)
-- Soirée (17:00-22:00) : Comfort (présence)
-- Nuit (22:00-06:00) : Eco (sommeil)
+```yaml
+# Créer 1 schedule avec plusieurs périodes :
+schedule.chauffage_confort:
+  Lundi-Vendredi: 06:00-08:00, 17:00-22:00
+  Samedi-Dimanche: 08:00-22:00
 
-**Exemple 2 : Weekend différent**
-- Créer `schedule.weekend_matin` : Sam-Dim 08:00-10:00
-- Créer `schedule.semaine_matin` : Lun-Ven 06:00-08:00
-- Utiliser `schedule.weekend_matin` dans le blueprint
+# Configuration blueprint :
+schedule_entity: schedule.chauffage_confort
+preset_schedule_on: comfort   # Pendant les périodes définies
+preset_schedule_off: eco      # En dehors des périodes
+```
+- 06:00 → Schedule ON → COMFORT (réveil)
+- 08:00 → Schedule OFF → ECO (travail)
+- 17:00 → Schedule ON → COMFORT (retour)
+- 22:00 → Schedule OFF → ECO (sommeil)
 
-**Exemple 3 : Télétravail**
-- Mercredi : Schedule actif seulement le matin (enfants rentrent à midi)
-- Vendredi : Schedule toute la journée (télétravail)
+**Exemple 2 : Télétravail certains jours**
+```yaml
+# Créer 1 schedule avec périodes variables :
+schedule.chauffage_confort:
+  Lundi-Mardi-Jeudi: 06:00-08:00, 17:00-22:00
+  Mercredi-Vendredi: 06:00-22:00  # Confort toute la journée
+  Samedi-Dimanche: 08:00-22:00
+```
+
+**Exemple 3 : Économies nocturnes importantes**
+```yaml
+# Créer 1 schedule pour les heures de journée :
+schedule.chauffage_jour:
+  Tous les jours: 06:00-23:00
+
+# Configuration blueprint :
+preset_schedule_on: comfort
+preset_schedule_off: frost_protection  # Hors-gel la nuit
+```
 
 #### Documentation
+- [Guide Planning](GUIDE_PLANNING.md) : Guide complet de configuration du planning horaire
 - [Guide de migration](MIGRATION_GUIDE.md) : Instructions complètes pour mettre à jour les configurations existantes
 - [Diagnostic](DIAGNOSTIC_ALARME.md) : Guide de dépannage pour les problèmes d'alarme et de planning
 
