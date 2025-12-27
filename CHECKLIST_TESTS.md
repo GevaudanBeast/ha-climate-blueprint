@@ -8,11 +8,13 @@
 - [ ] Désarmer l'alarme (`disarmed`) → Le thermostat passe en mode CONFORT (ou planning si actif)
 
 ### Tests Planning Horaire ⭐ NEW
-- [ ] Créer `schedule.test_matin` actif maintenant → Mode CONFORT (si configuré)
-- [ ] Désactiver le schedule → Revenir à preset désarmé (CONFORT)
-- [ ] Activer schedule + armer alarme → Planning ignoré, mode ECO (alarme prioritaire)
+- [ ] Créer `schedule.test_confort` ON maintenant → Preset `preset_schedule_on` (ex: COMFORT)
+- [ ] Passer le schedule à OFF → Preset `preset_schedule_off` (ex: ECO)
+- [ ] Schedule ON + armer alarme → Planning ignoré, mode ECO (alarme prioritaire)
+- [ ] Schedule OFF + désarmer alarme → Preset `preset_schedule_off` appliqué
 - [ ] Vérifier trace : `trigger.id = schedule_change` quand schedule change
-- [ ] Vérifier logbook : message `📅 Planning → PRESET`
+- [ ] Vérifier variable : `schedule_preset` = preset_schedule_on ou preset_schedule_off
+- [ ] Vérifier logbook : message `📅 Planning → COMFORT` ou `📅 Planning → ECO`
 
 ### Tests Été
 - [ ] Activer mode été → Le thermostat passe en OFF
@@ -36,11 +38,12 @@
 - [ ] Désarmer l'alarme → Preset HOME activé (ou planning si actif)
 
 ### Tests Planning Horaire ⭐ NEW
-- [ ] Créer schedule actif → Preset du planning appliqué
-- [ ] Désactiver schedule → Revenir à preset HOME
-- [ ] Planning + armer alarme → Planning ignoré, AWAY activé
-- [ ] Vérifier trace : `schedule_preset` calculé correctement
-- [ ] Vérifier logbook : message `📅 Planning → PRESET`
+- [ ] Schedule ON (alarme désarmée) → Preset `preset_schedule_on` appliqué
+- [ ] Schedule OFF (alarme désarmée) → Preset `preset_schedule_off` appliqué
+- [ ] Schedule ON + armer alarme → Planning ignoré, AWAY activé
+- [ ] Schedule OFF + armer alarme → Planning ignoré, AWAY activé
+- [ ] Vérifier trace : `schedule_preset` = preset_schedule_on ou preset_schedule_off
+- [ ] Vérifier logbook : message `📅 Planning → COMFORT` ou `📅 Planning → ECO`
 
 ### Tests Été/Hiver
 - [ ] Mode été ON → Mode COOL + température été
@@ -69,11 +72,12 @@
 - [ ] Éteindre la lumière (alarme désarmée, pas de planning) → Mode ECO
 
 ### Tests Planning Horaire ⭐ NEW
-- [ ] Schedule actif + lumière OFF → Planning prioritaire (ignore lumière)
-- [ ] Schedule actif + lumière ON → Planning prioritaire (ignore lumière)
-- [ ] Pas de schedule + lumière ON → Gestion lumière normale (CONFORT)
-- [ ] Planning + armer alarme → Planning ignoré, AWAY activé
-- [ ] Vérifier logbook : `📅 Planning → PRESET` (pas message lumière)
+- [ ] Schedule ON + lumière OFF → Planning prioritaire (ignore lumière), preset `preset_schedule_on`
+- [ ] Schedule ON + lumière ON → Planning prioritaire (ignore lumière), preset `preset_schedule_on`
+- [ ] Schedule OFF + lumière ON → Planning appliqué (ignore lumière), preset `preset_schedule_off`
+- [ ] Pas de schedule configuré + lumière ON → Gestion lumière normale (CONFORT)
+- [ ] Schedule ON + armer alarme → Planning ignoré, AWAY activé
+- [ ] Vérifier logbook : `📅 Planning → COMFORT` ou `📅 Planning → ECO` (pas message lumière)
 
 ### Tests Alarme
 - [ ] Armer l'alarme → Mode AWAY
@@ -107,11 +111,12 @@
 - [ ] Désarmer l'alarme → Contrôle thermique ou planning (si configuré)
 
 ### Tests Planning Horaire ⭐ NEW
-- [ ] Schedule actif + température basse → Planning prioritaire (ignore thermique)
-- [ ] Schedule actif + température haute → Planning prioritaire (ignore thermique)
-- [ ] Pas de schedule actif → Contrôle thermique normal
-- [ ] Planning + armer alarme → Planning ignoré, AWAY activé
-- [ ] Vérifier logbook : `📅 Planning → PRESET` (pas message thermique)
+- [ ] Schedule ON + température basse → Planning prioritaire (ignore thermique), preset `preset_schedule_on`
+- [ ] Schedule ON + température haute → Planning prioritaire (ignore thermique), preset `preset_schedule_on`
+- [ ] Schedule OFF + température basse → Planning appliqué (ignore thermique), preset `preset_schedule_off`
+- [ ] Pas de schedule configuré → Contrôle thermique normal
+- [ ] Schedule ON + armer alarme → Planning ignoré, AWAY activé
+- [ ] Vérifier logbook : `📅 Planning → COMFORT` ou `📅 Planning → ECO` (pas message thermique)
 
 ### Tests Été
 - [ ] Été + politique OFF → Mode OFF
