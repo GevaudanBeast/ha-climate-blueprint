@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.17"
-  description: "NEW v7.17: planning horaire avec 1 schedule HA (remplace gestion lumière si alarme désarmée). Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.16: détection lumière et Solar Optimizer robustes (ajout .lower()). Fix v7.15: détection été robuste (ajout .lower()). Fix v7.14: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF > Away > Planning (si désarmé) > Lumière (si désarmé + pas de planning)."
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.18"
+  description: "NEW v7.18: planning OFF bloque lumière, planning ON autorise lumière. Planning horaire avec 1 schedule HA: si OFF force ECO et désactive système lumière, si ON laisse lumière gérer. Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.16: détection lumière et Solar Optimizer robustes (ajout .lower()). ORDRE: Été > Fenêtre > SO ACTIF > Away > Planning OFF (bloque lumière) > Lumière (si planning ON ou pas de planning)."
   domain: automation
   author: LaCaseHome
 
@@ -375,7 +375,7 @@ action:
                   message: "🔒 Away → {{ preset_away|upper }}"
           - stop: "Away appliqué"
 
-  # 5) PLANNING HORAIRE – si alarme désarmée ET schedule actif (prioritaire sur lumière)
+  # 5) PLANNING HORAIRE – autorise ou bloque le système de gestion par lumière
   - choose:
       - conditions: "{{ not is_away }}"
         sequence:
@@ -392,7 +392,8 @@ action:
                   none
                 {% endif %}
           - choose:
-              - conditions: "{{ schedule_preset != 'none' and current_preset != schedule_preset }}"
+              # Planning OFF → Force ECO et bloque le système lumière
+              - conditions: "{{ schedule_preset != 'none' and schedule_preset == preset_sched_off and current_preset != schedule_preset }}"
                 sequence:
                   - service: climate.set_preset_mode
                     target: { entity_id: "{{ climate }}" }
@@ -400,10 +401,11 @@ action:
                   - service: logbook.log
                     data:
                       name: "{{ room }}"
-                      message: "📅 Planning → {{ schedule_preset|upper }}"
-                  - stop: "Planning appliqué"
+                      message: "📅 Planning OFF → {{ schedule_preset|upper }} (désactive lumière)"
+                  - stop: "Planning OFF : système lumière désactivé"
+              # Planning ON → Continue vers lumière (autorise le système lumière)
 
-  # 6) LUMIÈRE – gestion continue (applique selon l'état actuel) - SEULEMENT si non Away ET pas de planning
+  # 6) LUMIÈRE – gestion continue (applique selon l'état actuel) - Si non Away ET (planning ON OU pas de planning)
   - choose:
       # ============ ON behaviors ============
       - conditions: "{{ not is_away and is_light_on and light_on_behavior == 'force_comfort' and current_preset != preset_heat }}"

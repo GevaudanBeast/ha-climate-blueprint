@@ -7,6 +7,55 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2025-12-28] - X4FP Bathroom v7.18 : Planning autorise/bloque le système lumière
+
+### 🔧 Modification Comportementale - X4FP Bathroom
+
+**Changement** : Le planning n'applique plus directement un preset, mais **autorise ou bloque** le système de gestion par lumière.
+
+#### Ancien comportement (v7.17)
+- Planning actif → Applique preset du planning et ignore complètement la lumière
+
+#### Nouveau comportement (v7.18)
+- **Planning OFF** → Force `preset_schedule_off` (eco) et **bloque** le système lumière
+- **Planning ON** → **Autorise** le système lumière à fonctionner (lumière ON = comfort, lumière OFF = eco)
+- **Pas de planning** → Système lumière fonctionne normalement
+
+#### Tableau de comportement
+
+| Planning | Lumière | Résultat v7.17 (ancien) | Résultat v7.18 (nouveau) |
+|----------|---------|-------------------------|--------------------------|
+| OFF | ON | ECO (planning) | ECO (planning bloque) |
+| OFF | OFF | ECO (planning) | ECO (planning bloque) |
+| ON | ON | COMFORT (planning) | COMFORT (lumière) |
+| ON | OFF | COMFORT (planning) | ECO (lumière) |
+
+#### Raison du changement
+
+L'utilisateur souhaitait que le planning **autorise** le chauffage avec lumière plutôt que de le remplacer complètement.
+
+**Cas d'usage** :
+- Créer un schedule 06h-08h + 18h-20h (périodes douche)
+- Pendant ces périodes : la lumière peut déclencher le chauffage
+- En dehors : le chauffage reste en eco même si lumière allumée
+
+#### Impact utilisateur
+
+✅ **Rétrocompatible** : Les configurations existantes continuent de fonctionner
+⚠️ **Comportement modifié** : Si vous utilisez `preset_schedule_on`, le comportement avec lumière change
+- Avant : planning imposait le preset (ignorait lumière)
+- Maintenant : planning ON autorise la lumière à gérer
+
+**Migration** :
+- Si vous vouliez l'ancien comportement (planning impose preset) → Utilisez les blueprints Thermostat Heat, Room Thermostat ou X4FP Room
+- Si vous voulez le nouveau comportement (planning autorise lumière) → Parfait, X4FP Bathroom v7.18 !
+
+#### Documentation mise à jour
+- [GUIDE_PLANNING.md](GUIDE_PLANNING.md) : Section X4FP Bathroom avec tableau de comportement
+- [CHECKLIST_TESTS.md](CHECKLIST_TESTS.md) : Tests adaptés pour planning autorise/bloque
+
+---
+
 ## [2025-12-27] - Ajout Planning Horaire avec Schedules Home Assistant
 
 ### ✨ Nouvelle Fonctionnalité - Planning Horaire

@@ -66,7 +66,7 @@ Blueprint universel pour pièce avec thermostat ou climatisation réversible.
 
 ---
 
-### 3. X4FP Salle de Bain avec Lumière (v7.17)
+### 3. X4FP Salle de Bain avec Lumière (v7.18)
 **Fichier:** `blueprint_hvac_X4FP_bathroom.yaml`
 
 Blueprint pour sèche-serviettes fil pilote avec détection de présence via lumière.

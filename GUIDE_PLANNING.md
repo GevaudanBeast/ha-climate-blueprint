@@ -11,7 +11,7 @@ Le planning horaire vous permet de définir **deux presets différents selon les
 **Disponible dans tous les blueprints** :
 - ✅ Thermostat Heat v3.7
 - ✅ Room Thermostat v2.10
-- ✅ X4FP Bathroom v7.17
+- ✅ X4FP Bathroom v7.18 (planning autorise/bloque lumière)
 - ✅ X4FP Room v7.14
 
 ---
@@ -301,9 +301,9 @@ preset_schedule_off: eco
 
 ---
 
-### X4FP Bathroom v7.17
+### X4FP Bathroom v7.18
 
-**Spécificité** : Le planning **remplace** la gestion par lumière si actif.
+**Spécificité** : Le planning **autorise ou bloque** le système de gestion par lumière.
 
 **Presets disponibles** :
 - `eco` : Mode économique
@@ -312,19 +312,34 @@ preset_schedule_off: eco
 - `away` : Mode absence
 - `boost` : Mode boost
 
+**Fonctionnement unique** :
+- **Planning OFF** → Force `preset_schedule_off` (typiquement eco) et **bloque le système lumière**
+- **Planning ON** → **Autorise le système lumière** à fonctionner normalement (lumière ON = comfort, lumière OFF = eco)
+- **Pas de planning** → Système lumière fonctionne normalement
+
 **Priorité** :
 1. Alarme armée → `preset_away`
-2. ⭐ **Planning actif** → preset du planning (ignore la lumière)
-3. Lumière ON/OFF → `preset_heat` / `preset_idle`
+2. ⭐ **Planning OFF** → Force eco et bloque la lumière
+3. Lumière ON/OFF → `preset_heat` / `preset_idle` (si planning ON ou pas de planning)
 
 **Exemple** :
 ```yaml
 schedule_entity: schedule.salle_de_bain_confort
-preset_schedule_on: comfort   # Chauffe selon planning (ignore lumière)
-preset_schedule_off: eco      # Éco hors planning (ignore lumière)
+preset_schedule_on: comfort   # Autorise le système lumière
+preset_schedule_off: eco      # Force ECO et bloque la lumière
 ```
 
-**Usage typique** : Créer un schedule avec les périodes de douche (matin 06h-08h, soir 18h-20h) pour garantir une salle de bain chaude sans dépendre de la lumière.
+**Comportement détaillé** :
+| Planning | Lumière | Résultat |
+|----------|---------|----------|
+| OFF | ON | **ECO** (lumière ignorée) |
+| OFF | OFF | **ECO** (lumière ignorée) |
+| ON | ON | **COMFORT** (lumière gère) |
+| ON | OFF | **ECO** (lumière gère) |
+| Pas configuré | ON | **COMFORT** (lumière gère) |
+| Pas configuré | OFF | **ECO** (lumière gère) |
+
+**Usage typique** : Créer un schedule avec les périodes où vous voulez que la salle de bain puisse chauffer (matin 06h-08h, soir 18h-20h). Pendant ces périodes, la lumière contrôle le chauffage. En dehors, le chauffage reste en eco même si vous allumez la lumière.
 
 ---
 
