@@ -65,19 +65,23 @@
 
 ---
 
-## 🎯 Blueprint: X4FP Bathroom v7.17
+## 🎯 Blueprint: X4FP Bathroom v7.18
 
-### Tests Lumière
+### Tests Lumière (sans planning ou planning ON)
 - [ ] Allumer la lumière (alarme désarmée, pas de planning) → Mode CONFORT
 - [ ] Éteindre la lumière (alarme désarmée, pas de planning) → Mode ECO
+- [ ] Schedule ON + lumière ON → Lumière gère, Mode CONFORT
+- [ ] Schedule ON + lumière OFF → Lumière gère, Mode ECO
 
-### Tests Planning Horaire ⭐ NEW
-- [ ] Schedule ON + lumière OFF → Planning prioritaire (ignore lumière), preset `preset_schedule_on`
-- [ ] Schedule ON + lumière ON → Planning prioritaire (ignore lumière), preset `preset_schedule_on`
-- [ ] Schedule OFF + lumière ON → Planning appliqué (ignore lumière), preset `preset_schedule_off`
-- [ ] Pas de schedule configuré + lumière ON → Gestion lumière normale (CONFORT)
+### Tests Planning Horaire ⭐ v7.18 (autorise/bloque lumière)
+- [ ] Schedule OFF + lumière ON → Planning bloque lumière, force ECO
+- [ ] Schedule OFF + lumière OFF → Planning bloque lumière, force ECO
+- [ ] Schedule ON + allumer lumière → Lumière fonctionne, passe CONFORT
+- [ ] Schedule ON + éteindre lumière → Lumière fonctionne, passe ECO
+- [ ] Pas de schedule configuré + lumière ON → Lumière fonctionne (CONFORT)
 - [ ] Schedule ON + armer alarme → Planning ignoré, AWAY activé
-- [ ] Vérifier logbook : `📅 Planning → COMFORT` ou `📅 Planning → ECO` (pas message lumière)
+- [ ] Vérifier logbook Schedule OFF : `📅 Planning OFF → ECO (désactive lumière)`
+- [ ] Vérifier logbook Lumière (si planning ON) : `💡 ON → COMFORT` ou `💡 OFF → ECO`
 
 ### Tests Alarme
 - [ ] Armer l'alarme → Mode AWAY
