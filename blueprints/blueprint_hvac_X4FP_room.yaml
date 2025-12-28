@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP (Thermique + SO compatible) v7.14"
-  description: "NEW v7.14: planning horaire avec 1 schedule HA (remplace contrôle thermique si alarme désarmée). X4FP avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.13: détection Solar Optimizer robuste (ajout .lower()). Fix v7.12: détection été robuste (ajout .lower()). Fix v7.11: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF > Away > Planning (si désarmé) > Thermique (si désarmé + pas de planning)."
+  name: "HVAC – X4FP (Thermique + SO compatible) v7.15"
+  description: "NEW v7.15: planning avec calendriers HA (événement = ON, pas d'événement = OFF, remplace contrôle thermique). NEW v7.14: planning horaire avec 1 schedule HA (remplace contrôle thermique si alarme désarmée). X4FP avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.13: détection Solar Optimizer robuste (ajout .lower()). Fix v7.12: détection été robuste (ajout .lower()). Fix v7.11: triggers alarme/été fiables (retour string vs booléen). ORDRE: Été > Fenêtre > SO ACTIF > Away > Planning (si désarmé) > Thermique (si désarmé + pas de planning)."
   domain: automation
   author: LaCaseHome
 
@@ -80,19 +80,19 @@ blueprint:
     # -------- Planning horaire (OPTIONNEL - remplace thermique si alarme désarmée) --------
     schedule_entity:
       name: "📅 Planning Horaire (optionnel)"
-      description: "Schedule Home Assistant. Remplace contrôle thermique si alarme désarmée."
+      description: "Calendar Home Assistant. Événement actif = applique preset ON, pas d'événement = applique preset OFF. Remplace contrôle thermique si alarme désarmée."
       default: ""
-      selector: { entity: { domain: schedule } }
+      selector: { entity: { domain: calendar } }
 
     preset_schedule_on:
-      name: "Preset quand Planning ACTIF (ON)"
-      description: "Preset à appliquer quand le schedule est ON"
+      name: "Preset quand Planning ACTIF (événement en cours)"
+      description: "Preset à appliquer quand un événement calendrier est actif"
       default: comfort
       selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
 
     preset_schedule_off:
-      name: "Preset quand Planning INACTIF (OFF)"
-      description: "Preset à appliquer quand le schedule est OFF"
+      name: "Preset quand Planning INACTIF (pas d'événement)"
+      description: "Preset à appliquer quand aucun événement calendrier n'est actif"
       default: eco
       selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
 
@@ -425,7 +425,7 @@ action:
               schedule_preset: >-
                 {% if schedule_id and schedule_id != '' %}
                   {% set sched_state = states(schedule_id) | lower %}
-                  {% if sched_state == 'on' %}
+                  {% if sched_state and sched_state not in ['off', 'unavailable', 'unknown', ''] %}
                     {{ preset_sched_on }}
                   {% else %}
                     {{ preset_sched_off }}

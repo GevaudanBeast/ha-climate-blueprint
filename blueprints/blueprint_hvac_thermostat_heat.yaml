@@ -1,7 +1,7 @@
 blueprint:
-  name: HVAC – Thermostat Chauffage (Alarme = Eco/Confort) v3.7
+  name: HVAC – Thermostat Chauffage (Alarme = Eco/Confort) v3.8
   description: >
-    NEW v3.7: planning horaire avec schedules HA (actif uniquement si alarme désarmée).
+    NEW v3.8: planning horaire avec calendriers HA (événement = ON, pas d'événement = OFF, actif uniquement si alarme désarmée).
     Fix v3.6: détection alarme robuste (ajout .lower() pour compatibilité casse).
     Fix v3.5: triggers alarme/été fiables (retour string vs booléen).
     Chauffage automatique selon l'état de l'alarme :
@@ -79,23 +79,23 @@ blueprint:
     # Planning horaire (optionnel - actif uniquement si alarme désarmée)
     schedule_entity:
       name: "📅 Planning Horaire (optionnel)"
-      description: "Schedule Home Assistant. Définissez vos périodes (ex: ON 06h-08h et 17h-22h, OFF le reste). Actif uniquement si alarme désarmée."
+      description: "Calendar Home Assistant. Définissez vos événements (ex: événements 06h-08h et 17h-22h). Actif uniquement si alarme désarmée. Événement actif = ON, pas d'événement = OFF."
       default: ""
       selector:
         entity:
-          domain: schedule
+          domain: calendar
 
     preset_schedule_on:
-      name: "Preset quand Planning ACTIF (ON)"
-      description: "Preset à appliquer quand le schedule est ON"
+      name: "Preset quand Planning ACTIF (événement en cours)"
+      description: "Preset à appliquer quand un événement calendrier est actif"
       default: comfort
       selector:
         select:
           options: [eco, comfort, comfort-1, comfort-2, frost_protection, boost, none]
 
     preset_schedule_off:
-      name: "Preset quand Planning INACTIF (OFF)"
-      description: "Preset à appliquer quand le schedule est OFF"
+      name: "Preset quand Planning INACTIF (pas d'événement)"
+      description: "Preset à appliquer quand aucun événement calendrier n'est actif"
       default: eco
       selector:
         select:
@@ -224,7 +224,7 @@ action:
       schedule_preset: >-
         {% if not is_away and schedule_id and schedule_id != '' %}
           {% set sched_state = states(schedule_id) | lower %}
-          {% if sched_state == 'on' %}
+          {% if sched_state and sched_state not in ['off', 'unavailable', 'unknown', ''] %}
             {{ preset_sched_on }}
           {% else %}
             {{ preset_sched_off }}

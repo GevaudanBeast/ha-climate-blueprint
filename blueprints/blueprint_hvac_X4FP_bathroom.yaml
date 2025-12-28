@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.18"
-  description: "NEW v7.18: planning OFF bloque lumière, planning ON autorise lumière. Planning horaire avec 1 schedule HA: si OFF force ECO et désactive système lumière, si ON laisse lumière gérer. Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.16: détection lumière et Solar Optimizer robustes (ajout .lower()). ORDRE: Été > Fenêtre > SO ACTIF > Away > Planning OFF (bloque lumière) > Lumière (si planning ON ou pas de planning)."
+  name: "HVAC – X4FP Salle de bain (Lumière + SO compatible) v7.19"
+  description: "NEW v7.19: planning avec calendriers HA (événement = ON autorise lumière, pas d'événement = OFF bloque lumière). Planning horaire avec 1 calendar HA: si événement actif autorise système lumière, si pas d'événement force ECO et désactive système lumière. Sèche-serviettes avec Solar Optimizer prioritaire. Surveille attribut is_active du switch SO (fallback sur state pour switch classique). Fix v7.16: détection lumière et Solar Optimizer robustes (ajout .lower()). ORDRE: Été > Fenêtre > SO ACTIF > Away > Planning OFF (bloque lumière) > Lumière (si planning ON ou pas de planning)."
   domain: automation
   author: LaCaseHome
 
@@ -79,19 +79,19 @@ blueprint:
     # -------- Planning horaire (OPTIONNEL - remplace lumière si alarme désarmée) --------
     schedule_entity:
       name: "📅 Planning Horaire (optionnel)"
-      description: "Schedule Home Assistant. Remplace gestion lumière si alarme désarmée."
+      description: "Calendar Home Assistant. Événement actif = autorise lumière, pas d'événement = bloque lumière (force ECO). Actif uniquement si alarme désarmée."
       default: ""
-      selector: { entity: { domain: schedule } }
+      selector: { entity: { domain: calendar } }
 
     preset_schedule_on:
-      name: "Preset quand Planning ACTIF (ON)"
-      description: "Preset à appliquer quand le schedule est ON"
+      name: "Preset quand Planning ACTIF (événement en cours)"
+      description: "Autorise le système lumière (ce preset n'est pas directement appliqué)"
       default: comfort
       selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
 
     preset_schedule_off:
-      name: "Preset quand Planning INACTIF (OFF)"
-      description: "Preset à appliquer quand le schedule est OFF"
+      name: "Preset quand Planning INACTIF (pas d'événement)"
+      description: "Force ce preset et bloque le système lumière"
       default: eco
       selector: { select: { options: [eco, comfort, comfort-1, comfort-2, away, boost] } }
 
@@ -383,7 +383,7 @@ action:
               schedule_preset: >-
                 {% if schedule_id and schedule_id != '' %}
                   {% set sched_state = states(schedule_id) | lower %}
-                  {% if sched_state == 'on' %}
+                  {% if sched_state and sched_state not in ['off', 'unavailable', 'unknown', ''] %}
                     {{ preset_sched_on }}
                   {% else %}
                     {{ preset_sched_off }}
