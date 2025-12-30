@@ -1,6 +1,6 @@
 blueprint:
-  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.11"
-  description: "NEW v2.11: planning horaire avec calendriers HA (événement = ON, pas d'événement = OFF). NEW v2.10: planning horaire avec 1 schedule HA (actif uniquement si alarme désarmée). Fix v2.9: détection Solar Optimizer robuste (ajout .lower()). Fix v2.8: triggers alarme/été fiables (retour string vs booléen). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → planning horaire OU preset 'home' par défaut. Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
+  name: "HVAC – Pièce (Thermostat/Clim) – Été/Hiver + Away + SO v2.9"
+  description: "Fix v2.9: détection Solar Optimizer robuste (ajout .lower()). Fix v2.8: triggers alarme/été fiables (retour string vs booléen). Fenêtre ouverte → OFF en heat ET cool (avec délais). Solaire (PRIORITAIRE sur Away). Away (alarme armée) → preset 'away' (ou OFF si indisponible). Désarmement → preset 'home' (ou 'none' si indisponible). Bascule auto été/hiver (cool/heat) + consignes par défaut. Tick optimisé + Solar Optimizer compatible."
   domain: automation
   author: LaCaseHome
 
@@ -60,31 +60,6 @@ blueprint:
       selector:
         entity:
           domain: alarm_control_panel
-
-    # Planning horaire (optionnel - actif uniquement si alarme désarmée)
-    schedule_entity:
-      name: "📅 Planning Horaire (optionnel)"
-      description: "Calendar Home Assistant. Définissez vos événements de confort. Actif uniquement si alarme désarmée. Événement actif = ON, pas d'événement = OFF."
-      default: ""
-      selector:
-        entity:
-          domain: calendar
-
-    preset_schedule_on:
-      name: "Preset quand Planning ACTIF (événement en cours)"
-      description: "Preset à appliquer quand un événement calendrier est actif"
-      default: comfort
-      selector:
-        select:
-          options: [none, eco, comfort, home, away, boost]
-
-    preset_schedule_off:
-      name: "Preset quand Planning INACTIF (pas d'événement)"
-      description: "Preset à appliquer quand aucun événement calendrier n'est actif"
-      default: eco
-      selector:
-        select:
-          options: [none, eco, comfort, home, away, boost]
 
     # Solar Optimizer (OPTIONNEL)
     solar_enable:
@@ -146,10 +121,6 @@ variables:
   heat_default: !input thermostat_heat_default
   cool_default: !input thermostat_cool_default
   tick_minutes: !input tick_minutes
-  # Planning horaire
-  schedule_id: !input schedule_entity
-  preset_sched_on: !input preset_schedule_on
-  preset_sched_off: !input preset_schedule_off
 
 trigger:
   # Fenêtres
@@ -172,12 +143,6 @@ trigger:
     platform: template
     value_template: >-
       {{ states(alarm_id) if alarm_id and alarm_id != '' else 'none' }}
-
-  # Planning horaire (trigger si configuré)
-  - id: schedule_change
-    platform: template
-    value_template: >-
-      {{ states(schedule_id) if schedule_id and schedule_id != '' else 'none' }}
 
   # Été (trigger si configuré)
   - id: summer_change
@@ -324,49 +289,32 @@ action:
                           message: "🔒 Alarme armée → OFF (pas de preset 'away')"
           - stop: "Mode Away appliqué"
 
-      # Alarme désarmée → Planning horaire OU Preset HOME par défaut
+      # Alarme désarmée → Preset HOME (ou NONE si HOME n'existe pas)
       - conditions: "{{ not is_away }}"
         sequence:
-          - variables:
-              schedule_preset: >-
-                {% if schedule_id and schedule_id != '' %}
-                  {% set sched_state = states(schedule_id) | lower %}
-                  {% if sched_state and sched_state not in ['off', 'unavailable', 'unknown', ''] %}
-                    {{ preset_sched_on }}
-                  {% else %}
-                    {{ preset_sched_off }}
-                  {% endif %}
-                {% else %}
-                  none
-                {% endif %}
-              target_preset: >-
-                {% if schedule_preset != 'none' %}
-                  {{ schedule_preset }}
-                {% elif 'home' in presets %}
-                  home
-                {% elif 'none' in presets %}
-                  none
-                {% else %}
-                  none
-                {% endif %}
           - choose:
-              # Appliquer le preset du planning ou home
-              - conditions: "{{ target_preset != 'none' and target_preset in presets and current_preset != target_preset }}"
+              - conditions: "{{ 'home' in presets and current_preset != 'home' }}"
                 sequence:
                   - service: climate.set_preset_mode
                     target:
                       entity_id: "{{ climate }}"
                     data:
-                      preset_mode: "{{ target_preset }}"
+                      preset_mode: "home"
                   - service: logbook.log
                     data:
                       name: "{{ room }}"
-                      message: >-
-                        {% if schedule_preset != 'none' %}
-                          📅 Planning → Preset {{ target_preset|upper }}
-                        {% else %}
-                          🏠 Alarme désarmée → Preset {{ target_preset|upper }}
-                        {% endif %}
+                      message: "🏠 Alarme désarmée → Preset HOME appliqué"
+              - conditions: "{{ 'home' not in presets and 'none' in presets and current_preset != 'none' }}"
+                sequence:
+                  - service: climate.set_preset_mode
+                    target:
+                      entity_id: "{{ climate }}"
+                    data:
+                      preset_mode: "none"
+                  - service: logbook.log
+                    data:
+                      name: "{{ room }}"
+                      message: "🏠 Alarme désarmée → Preset NONE (pas de 'home')"
 
   # 4) Mode normal → bascule été/hiver + consigne (SEULEMENT si non Away)
   - choose:
